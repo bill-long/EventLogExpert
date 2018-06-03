@@ -5,7 +5,7 @@ using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace EventLogExpert.EventUtils
+namespace EventLogExpert
 {
     public class EventUtils
     {
@@ -26,15 +26,18 @@ namespace EventLogExpert.EventUtils
                     EventRecord evt;
                     while (null != (evt = reader.ReadEvent()))
                     {
-                        if (!_providerDictionary.TryGetValue(evt.ProviderName, out ProviderMetadata providerMetadata))
+                        // Attempting to get the task display name throws for
+                        // providers that are not properly registered, so
+                        // wrap it in try/catch
+                        string taskDisplayName;
+                        try
                         {
-                            var metadata = new ProviderMetadata(evt.ProviderName, _session, CultureInfo.CurrentCulture);
-                            _providerDictionary.Add(evt.ProviderName, metadata);
-                            providerMetadata = metadata;
+                            taskDisplayName = evt.TaskDisplayName;
                         }
-
-                        var evt1 = evt;
-                        var providerEvent = providerMetadata.Events.FirstOrDefault(e => e.Id == evt1.Id);
+                        catch
+                        {
+                            taskDisplayName = "";
+                        }
 
                         events.Add(new
                         {
@@ -44,8 +47,8 @@ namespace EventLogExpert.EventUtils
                             evt.Level,
                             evt.TimeCreated,
                             evt.ProviderName,
-                            Category = providerEvent?.Task.Name,
-                            providerEvent?.Description,
+                            Category = taskDisplayName,
+                            Description = evt.FormatDescription(),
                             Properties = evt.Properties.Select(p => p.Value)
                         });
                     }

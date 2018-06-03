@@ -2,4 +2,22 @@
   <h1 class="title">
     {{ 'PAGES.HOME.TITLE' | translate }}
   </h1>
+  <table>
+    <thead>
+      <th nowrap>Time</th>
+      <th>Id</th>
+      <th>Machine</th>
+      <th>Level</th>
+      <th>Provider</th>
+    </thead>
+    <tbody>
+      <tr *ngFor="let evt of rows">
+        <td nowrap>{{evt.TimeCreated | date:'medium'}}</td>
+        <td>{{evt.Id}}</td>
+        <td>{{evt.MachineName}}</td>
+        <td>{{evt.Level}}</td>
+        <td>{{evt.ProviderName}}</td>
+      </tr>
+    </tbody>
+  </table>
 </div>
