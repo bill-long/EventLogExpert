@@ -1,4 +1,4 @@
-#Prerequisites 
+# Prerequisites 
 1. Install Angular Cli 6+
 	npm install -g @angular/cli
 2. Install Node.js Version 8+
@@ -8,7 +8,7 @@ https://www.microsoft.com/net/download/windows
 
 
 
-#Building and Testing
+# Building and Testing
 
 1. Change into EventLogExpert\EventUtils and run: dotnet build 
 2. Copy the DLL from EventUtils to Electron folder 
