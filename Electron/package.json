@@ -33,7 +33,9 @@
     "test": "ng test",
     "e2e": "ng e2e"
   },
-  "dependencies": {},
+  "dependencies": {
+    "electron-edge-js": "^8.3.4"
+  },
   "devDependencies": {
     "@angular-devkit/build-angular": "0.6.3",
     "@angular/cli": "6.0.3",
