@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
-using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -9,8 +8,10 @@ namespace EventLogExpert
 {
     public class EventUtils
     {
+        private readonly Dictionary<string, ProviderMetadata> _providerDictionary =
+            new Dictionary<string, ProviderMetadata>();
+
         private readonly EventLogSession _session = new EventLogSession();
-        private readonly Dictionary<string, ProviderMetadata> _providerDictionary = new Dictionary<string, ProviderMetadata>();
 
         public async Task<object> ReadEvents(dynamic input)
         {
