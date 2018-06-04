@@ -17,18 +17,12 @@ A Windows Event Log viewer for IT professionals and power users.
 
 ### Building and Testing
 
-1. Change into EventLogExpert\EventUtils and run:
-
-	`dotnet build`
-
-2. Copy the DLL from EventUtils to Electron folder 
-
-	`Copy-Item .\EventUtils\bin\Debug\net471\EventLogExpert.dll ..\Electron\`
-
-3. Change into the Electron Folder run: 
+1. Change into the Electron Folder run: 
 
 	`npm install`
 
-4. When that finishes you should be able to run:
+2. When that finishes you should be able to run:
 
-	`npm start `
+	`npm start`
+
+	This step will build the dotnet DLL, copy it into the Electron folder, and start the Electron app.
