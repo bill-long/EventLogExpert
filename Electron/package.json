@@ -19,10 +19,11 @@
   "scripts": {
     "postinstall": "npx electron-builder install-app-deps",
     "ng": "ng",
-    "start": "npm-run-all -p ng:serve electron:serve",
+    "start": "npm run builddll && npm-run-all -p ng:serve electron:serve",
     "build": "npm run electron:tsc && ng build",
     "build:dev": "npm run build -- -c dev",
     "build:prod": "npm run build -- -c production",
+    "builddll": "dotnet build ../EventUtils/EventUtils -o ../../Electron -f net471",
     "ng:serve": "ng serve -o",
     "electron:tsc": "tsc main.ts",
     "electron:serve": "wait-on http-get://localhost:4200/ && npm run electron:tsc && electron . --serve",
