@@ -6,7 +6,8 @@
 /out-tsc
 /app-builds
 main.js
-EventLogExpert.dll
+*.dll
+*.pdb
 
 # dependencies
 /node_modules
