@@ -1,6 +1,7 @@
 import { Component, OnInit, NgZone } from '@angular/core';
 import { Observable } from 'rxjs';
-import { EventLogService, State } from '../../providers/eventLogService';
+import { EventLogService, State } from '../../providers/eventlog.service';
+import { DatabaseService } from '../../providers/database.service';
 
 @Component({
   selector: 'app-home',
@@ -15,7 +16,7 @@ export class HomeComponent implements OnInit {
   renderBatchSize = 1000;
   renderDelay = 100;
 
-  constructor(private eventLogService: EventLogService, private ngZone: NgZone) {
+  constructor(private eventLogService: EventLogService, private ngZone: NgZone, private dbService: DatabaseService) {
     this.state$ = this.eventLogService.state$;
     this.state$.subscribe(async (s: State) => {
       if (!s.openEventLogs || !s.openEventLogs.length) { return; }
@@ -27,6 +28,7 @@ export class HomeComponent implements OnInit {
         await this.later(this.renderDelay);
       }
     });
+
     this.eventLogService.loadActiveLog('Application', null);
   }
 

@@ -19,8 +19,9 @@ import { WebviewDirective } from './directives/webview.directive';
 
 import { AppComponent } from './app.component';
 import { HomeComponent } from './components/home/home.component';
-import { EventLogService } from './providers/eventLogService';
+import { EventLogService } from './providers/eventlog.service';
 import { EventUtils } from './providers/eventUtils';
+import { DatabaseService } from './providers/database.service';
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -46,7 +47,7 @@ export function HttpLoaderFactory(http: HttpClient) {
       }
     })
   ],
-  providers: [ElectronService, EventLogService, EventUtils],
+  providers: [ElectronService, EventLogService, EventUtils, DatabaseService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
