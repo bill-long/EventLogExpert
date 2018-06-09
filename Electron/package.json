@@ -1,19 +1,9 @@
 {
-  "name": "angular-electron",
-  "version": "4.0.0",
-  "description": "Angular 6 with Electron (Typescript + SASS + Hot Reload)",
-  "homepage": "https://github.com/maximegris/angular-electron",
+  "name": "eventlogexpert",
+  "version": "0.1.0",
   "author": {
-    "name": "Maxime GRIS",
-    "email": "maxime.gris@gmail.com"
+    "name": "Microsoft"
   },
-  "keywords": [
-    "angular",
-    "angular 6",
-    "electron",
-    "typescript",
-    "sass"
-  ],
   "main": "main.js",
   "private": true,
   "scripts": {
@@ -60,6 +50,7 @@
     "core-js": "2.5.6",
     "electron": "2.0.2",
     "electron-builder": "20.14.7",
+    "electron-is-dev": "^0.3.0",
     "electron-reload": "1.2.2",
     "jasmine-core": "3.1.0",
     "jasmine-spec-reporter": "4.2.1",
