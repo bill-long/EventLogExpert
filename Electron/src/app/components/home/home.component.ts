@@ -1,43 +1,38 @@
-import { Component, OnInit, NgZone } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map, scan, distinctUntilChanged } from 'rxjs/operators';
 import { EventLogService, State } from '../../providers/eventlog.service';
-import { DatabaseService } from '../../providers/database.service';
 
 @Component({
   selector: 'app-home',
   templateUrl: './home.component.html',
-  styleUrls: ['./home.component.scss']
+  styleUrls: ['./home.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent {
 
   stuff: string;
   state$: Observable<State>;
-  rows: any[];
-  renderBatchSize = 1000;
-  renderDelay = 100;
+  rows$: Observable<any[]>;
 
-  constructor(private eventLogService: EventLogService, private ngZone: NgZone, private dbService: DatabaseService) {
+  constructor(private eventLogService: EventLogService) {
     this.state$ = this.eventLogService.state$;
-    this.state$.subscribe(async (s: State) => {
-      if (!s.openEventLogs || !s.openEventLogs.length) { return; }
-      if (s.openEventLogs[0].records.length < this.renderBatchSize) { this.rows = s.openEventLogs[0].records; return; }
-      const count = s.openEventLogs[0].records.length / this.renderBatchSize;
-      this.rows = [];
-      for (let i = 0; i < count; ++i) {
-        this.rows.push(...s.openEventLogs[0].records.slice(i * this.renderBatchSize, i * this.renderBatchSize + this.renderBatchSize));
-        await this.later(this.renderDelay);
-      }
-    });
-
-    this.eventLogService.loadActiveLog('Application', null);
+    this.rows$ = this.state$.pipe(
+      map(s => s.openEventLog ? s.openEventLog.records : []),
+      scan((oldValue, newValue: any[]) => {
+        if (oldValue.length < 1000 && newValue.length > oldValue.length) {
+          return newValue.slice(0, 1000);
+        } else {
+          return oldValue;
+        }
+      }, []),
+      distinctUntilChanged());
   }
 
   later(delay) {
-    return new Promise(function(resolve) {
-        setTimeout(resolve, delay);
+    return new Promise(function (resolve) {
+      setTimeout(resolve, delay);
     });
   }
 
-  ngOnInit() {
-  }
 }

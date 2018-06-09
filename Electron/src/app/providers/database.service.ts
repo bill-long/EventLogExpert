@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { ElectronService } from './electron.service';
+import { from } from 'rxjs';
 
 const DATABASE_NAME = 'messagesDb';
 const OBJECTSTORE_NAME = 'messages';
@@ -51,6 +52,10 @@ export class DatabaseService {
     });
   }
 
+  addMessages$(messages: any[]) {
+    return from(this.addMessages(messages));
+  }
+
   getAllMessages() {
     return new Promise<any[]>(resolve => {
       const messages = [];
@@ -66,6 +71,10 @@ export class DatabaseService {
     });
   }
 
+  getAllMessages$() {
+    return from(this.getAllMessages());
+  }
+
   deleteAllMessages() {
     return new Promise(resolve => {
       this.db.transaction(OBJECTSTORE_NAME, 'readwrite')
@@ -73,6 +82,10 @@ export class DatabaseService {
         .clear()
         .onsuccess = (ev) => resolve();
     });
+  }
+
+  deleteAllMessages$() {
+    return from(this.deleteAllMessages());
   }
 
   /**
@@ -84,6 +97,10 @@ export class DatabaseService {
    */
   findMessages(providerName: string, id: number) {
     return this.getMessages(providerName, id, true);
+  }
+
+  findMessages$(providerName: string, id: number) {
+    return from(this.findMessages(providerName, id));
   }
 
   /**

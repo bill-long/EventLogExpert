@@ -20,7 +20,7 @@ import { WebviewDirective } from './directives/webview.directive';
 import { AppComponent } from './app.component';
 import { HomeComponent } from './components/home/home.component';
 import { EventLogService } from './providers/eventlog.service';
-import { EventUtils } from './providers/eventUtils';
+import { EventUtils } from './providers/eventutils.service';
 import { DatabaseService } from './providers/database.service';
 
 // AoT requires an exported function for factories
