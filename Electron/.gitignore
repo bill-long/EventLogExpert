@@ -8,7 +8,7 @@
 main.js
 *.dll
 *.pdb
-*.db
+*.js
 
 # dependencies
 /node_modules

@@ -6,7 +6,6 @@ import { ipcRenderer, webFrame, remote } from 'electron';
 import * as childProcess from 'child_process';
 import * as fs from 'fs';
 import * as edge from 'electron-edge-js';
-import * as Nedb from 'nedb';
 
 @Injectable()
 export class ElectronService {
@@ -17,7 +16,6 @@ export class ElectronService {
   childProcess: typeof childProcess;
   fs: typeof fs;
   edge: typeof edge;
-  nedb: typeof Nedb;
 
   constructor() {
     // Conditional imports
@@ -29,7 +27,6 @@ export class ElectronService {
       this.childProcess = window.require('child_process');
       this.fs = window.require('fs');
       this.edge = window.require('electron-edge-js');
-      this.nedb = window.require('nedb');
     }
   }
 

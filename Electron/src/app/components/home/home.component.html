@@ -11,7 +11,7 @@
       <th>Provider</th>
     </thead>
     <tbody>
-      <tr *ngFor="let evt of rows">
+      <tr *ngFor="let evt of rows$ | async">
         <td nowrap>{{evt.TimeCreated | date:'medium'}}</td>
         <td>{{evt.Id}}</td>
         <td>{{evt.MachineName}}</td>
