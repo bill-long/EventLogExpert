@@ -22,6 +22,7 @@ import { HomeComponent } from './components/home/home.component';
 import { EventLogService } from './providers/eventlog.service';
 import { EventUtils } from './providers/eventutils.service';
 import { DatabaseService } from './providers/database.service';
+import { ScrollbarComponent } from './components/scrollbar/scrollbar.component';
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -32,7 +33,8 @@ export function HttpLoaderFactory(http: HttpClient) {
   declarations: [
     AppComponent,
     HomeComponent,
-    WebviewDirective
+    WebviewDirective,
+    ScrollbarComponent
   ],
   imports: [
     BrowserModule,

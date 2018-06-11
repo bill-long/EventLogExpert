@@ -1,23 +1,51 @@
-<div class="container">
-  <h1 class="title">
-    {{ 'PAGES.HOME.TITLE' | translate }}
-  </h1>
-  <table>
-    <thead>
-      <th nowrap>Time</th>
-      <th>Id</th>
-      <th>Machine</th>
-      <th>Level</th>
-      <th>Provider</th>
-    </thead>
-    <tbody>
-      <tr *ngFor="let evt of rows$ | async">
-        <td nowrap>{{evt.TimeCreated | date:'medium'}}</td>
-        <td>{{evt.Id}}</td>
-        <td>{{evt.MachineName}}</td>
-        <td>{{evt.Level}}</td>
-        <td>{{evt.ProviderName}}</td>
-      </tr>
-    </tbody>
-  </table>
+<div class="home-container">
+  <div class="filter-pane">
+    <div class="expander" *ngIf="!filterPaneExpanded" (click)="filterPaneExpanded = true"><div class="expander-closed">»</div></div>
+    <div *ngIf="filterPaneExpanded">
+      <div class="expander" (click)="filterPaneExpanded = false"><div class="expander-open">»</div></div>
+      <div class="filters" *ngIf="filterPaneExpanded">
+        <div>Filter</div>
+        <div>Things</div>
+        <div>Go</div>
+        <div>Here</div>
+      </div>
+    </div>
+  </div>
+  <div class="main-area" (wheel)="onWheel($event)">
+    <table *ngIf="rows$ | async as rows">
+      <thead>
+        <th nowrap [ngStyle]="{ 'width': columnWidths['Time'] + 'px' }">Time</th>
+        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+        <th nowrap [ngStyle]="{ 'width': columnWidths['Id'] + 'px' }">Id</th>
+        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+        <th nowrap [ngStyle]="{ 'width': columnWidths['Machine'] + 'px' }">Machine</th>
+        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+        <th nowrap [ngStyle]="{ 'width': columnWidths['Level'] + 'px' }">Level</th>
+        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+        <th nowrap [ngStyle]="{ 'width': columnWidths['Provider'] + 'px' }">Provider</th>
+        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+        <th nowrap>Description</th>
+      </thead>
+      <tbody>
+        <tr *ngFor="let evt of rows">
+          <td nowrap [ngStyle]="{ 'width': columnWidths['Time'] + 'px' }">{{evt.TimeCreated | date:'medium'}}</td>
+          <td class="table-divider"></td>
+          <td>{{evt.Id}}</td>
+          <td class="table-divider"></td>
+          <td>{{evt.MachineName}}</td>
+          <td class="table-divider"></td>
+          <td>{{evt.Level}}</td>
+          <td class="table-divider"></td>
+          <td>{{evt.ProviderName}}</td>
+          <td class="table-divider"></td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+    <app-scrollbar [rowcount]="(state$ | async)?.records.length" [position]="renderOffset" (updatePosition)="onScrollbar($event)"></app-scrollbar>
+  </div>
+  <div class="status-bar">
+    <div *ngIf="(state$ | async)?.records.length">Records: {{(state$ | async)?.records.length}}</div>
+    <div *ngIf="rows$ | async">Position: {{renderOffset + 1}}</div>
+  </div>
 </div>
