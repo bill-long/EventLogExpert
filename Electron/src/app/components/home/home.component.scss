@@ -1,13 +1,89 @@
-table {
-  font-family: Arial, Helvetica, sans-serif;
-  font-size: 10pt;
+.home-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.filter-pane {
+  background-color: #353535;
+}
+
+.filters {
+  height: 300px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.expander {
+  background-color: rgb(60, 100, 231);
+  color: white;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  height: 24px;
+  line-height: 24px;
+  font-weight: 500;
+  font-size: 16pt;
+}
+
+.expander-closed {
+  transform: rotate(90deg) scaleY(1.5);
+}
+
+.expander-open {
+  transform: rotate(-90deg) scaleY(1.5);
+}
+
+.main-area {
+  flex: 1;
+  overflow-y: hidden;
+  display: flex;
+}
+
+.status-bar {
+  display: flex;
+  flex-direction: row;
+  height: 24px;
+  background-color: rgb(60, 100, 231);
+  color: white;
+  align-items: center;
+}
+
+.status-bar > div {
+  margin-left: 10px;
 }
 
 tr:nth-child(odd) {
-  background-color: #222222;
+  background-color: #353535;
 }
 
 tr:hover {
   background-color: black;
 }
 
+table {
+  border-spacing: 0;
+  table-layout: fixed;
+  width: calc(100% - 10px);
+}
+
+th {
+  overflow: hidden;
+}
+
+td {
+  overflow: hidden;
+  white-space: nowrap;
+  padding-left: 5px;
+}
+
+.table-divider {
+  background: #111111;
+  color: #111111;
+  width: 2px;
+}
+
+th.table-divider {
+  cursor: col-resize;
+}

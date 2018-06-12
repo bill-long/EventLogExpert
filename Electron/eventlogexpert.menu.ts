@@ -65,7 +65,7 @@ export class EventLogExpertMenu {
     viewMenu.append(new MenuItem({ role: 'forcereload' }));
     viewMenu.append(new MenuItem({ role: 'toggledevtools' }));
     viewMenu.append(new MenuItem({ role: 'separator' }));
-    viewMenu.append(new MenuItem({ role: 'resetzoon' }));
+    viewMenu.append(new MenuItem({ role: 'resetzoom' }));
     viewMenu.append(new MenuItem({ role: 'zoomin' }));
     viewMenu.append(new MenuItem({ role: 'zoomout' }));
     viewMenu.append(new MenuItem({ role: 'separator' }));

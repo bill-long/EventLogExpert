@@ -12,7 +12,7 @@ export class EventLogService {
     state$: Observable<State>;
 
     constructor(private eventUtils: EventUtils, private ngZone: NgZone, private electronSvc: ElectronService) {
-        const initState: State = { openEventLog: null };
+        const initState: State = { loading: false, name: null, records: [] };
         this.actions$ = new Subject();
         this.state$ = this.actions$.pipe(scan(reducer, initState), share());
 
@@ -63,63 +63,64 @@ export class EventLogService {
      * Calls the delegate until there are no more events
      * and updates progress while doing so.
      */
-    private loadEventsFromReaderDelegate(result: { reader: any, count: number }) {
+    private loadEventsFromReaderDelegate(result: { reader: any }) {
 
         const reader = result.reader;
-        const totalEvents = result.count;
 
         // Create an observable that will emit the events
-        const resultObserver = Observable.create(async (o: Observer<any[]>) => {
+        const resultObserver: Observable<any[]> =
+            Observable.create(async (o: Observer<any[]>) => {
 
-            // Wrap the reader delegate in a Promise
-            const resultReader = () => {
-                return new Promise<any[]>(resolve => {
-                    reader(null, (readerError, events) => {
-                        if (readerError) {
-                            console.log(readerError);
-                            resolve(null);
-                        } else {
-                            resolve(events);
-                        }
+                // Wrap the reader delegate in a Promise
+                const resultReader = () => {
+                    return new Promise<any[]>(resolve => {
+                        reader(null, (readerError, events) => {
+                            if (readerError) {
+                                console.log(readerError);
+                                resolve(null);
+                            } else {
+                                resolve(events);
+                            }
+                        });
                     });
-                });
-            };
+                };
 
-            // Loop until there are no more results
-            let results = await resultReader();
-            while (results !== null) {
-                // Emit this set of results
-                o.next(results);
+                // Loop until there are no more results
+                let results = await resultReader();
+                while (results !== null) {
+                    // Emit this set of results
+                    o.next(results);
 
-                // Await a 1 millisecond timeout in order to allow the view
-                // to render. It seems that if the zone flips to Stable and
-                // then immediately back to Unstable when go to grab the
-                // next set of results, the view gets no time to render in
-                // between, so no records are visible until we are completely
-                // done loading. To avoid that issue, we await here.
-                await new Promise(resolve => setTimeout(resolve, 1));
+                    // Await a 1 millisecond timeout in order to allow the view
+                    // to render. It seems that if the zone flips to Stable and
+                    // then immediately back to Unstable when go to grab the
+                    // next set of results, the view gets no time to render in
+                    // between, so no records are visible until we are completely
+                    // done loading. To avoid that issue, we await here.
+                    await new Promise(resolve => setTimeout(resolve, 1));
 
-                // Now grab the next batch
-                results = await resultReader();
-            }
+                    // Now grab the next batch
+                    results = await resultReader();
+                }
 
-            // Complete
-            o.complete();
-        });
+                // Complete
+                o.complete();
+            });
 
-        resultObserver.subscribe(r => this.ngZone.run(() => this.actions$.next(new EventsLoadedAction(r))));
+        resultObserver.subscribe(
+            r => this.ngZone.run(() => this.actions$.next(new EventsLoadedAction(r))),
+            err => console.log(err),
+            () => this.ngZone.run(() => this.actions$.next(new FinishedLoadingAction()))
+        );
     }
-}
-
-export interface EventLog {
-    name: string;
-    records: any[];
 }
 
 // State
 
 export interface State {
-    openEventLog: EventLog;
+    loading: boolean;
+    name: string;
+    records: any[];
 }
 
 // Actions
@@ -128,6 +129,12 @@ export class EventsLoadedAction {
     type = 'EVENTS_LOADED';
 
     constructor(public records: any[]) { }
+}
+
+export class FinishedLoadingAction {
+    type = 'FINISHED_LOADING';
+
+    constructor() { }
 }
 
 export class LoadActiveLogAction {
@@ -150,6 +157,7 @@ export class LogLoadedAction {
 
 export type Action =
     EventsLoadedAction |
+    FinishedLoadingAction |
     LoadActiveLogAction |
     LoadLogFromFile |
     LogLoadedAction;
@@ -157,29 +165,47 @@ export type Action =
 // Reducer
 
 const reducer = (state: State, action: Action): State => {
+    if (!AppConfig.production) {
+        console.log(action);
+    }
     switch (action.type) {
         case 'EVENTS_LOADED': {
             const thisAction = action as EventsLoadedAction;
             return {
-                openEventLog: { name: state.openEventLog.name, records: [...state.openEventLog.records, ...thisAction.records] }
+                loading: true,
+                name: state.name,
+                records: [...state.records, ...thisAction.records]
+            };
+        }
+        case 'FINISHED_LOADING': {
+            return {
+                loading: false,
+                name: state.name,
+                records: state.records.reverse()
             };
         }
         case 'LOAD_ACTIVE_LOG': {
             const thisAction = action as LoadActiveLogAction;
             return {
-                openEventLog: { name: thisAction.logName, records: [] }
+                loading: true,
+                name: thisAction.logName,
+                records: []
             };
         }
         case 'LOAD_LOG_FROM_FILE': {
             const thisAction = action as LoadLogFromFile;
             return {
-                openEventLog: { name: thisAction.file, records: [] }
+                loading: true,
+                name: thisAction.file,
+                records: []
             };
         }
         case 'LOG_LOADED': {
             const thisAction = action as LogLoadedAction;
             return {
-                openEventLog: { name: thisAction.logName, records: thisAction.records }
+                loading: false,
+                name: thisAction.logName,
+                records: thisAction.records
             };
         }
 
