@@ -13,6 +13,7 @@ export class IngestComponent implements OnInit {
   serverName: string;
   tag: string;
   status: string[];
+  running: boolean;
 
   constructor(private eventutils: EventUtils, private dbService: DatabaseService) {
   }
@@ -21,6 +22,8 @@ export class IngestComponent implements OnInit {
   }
 
   async ingestAllProviders() {
+
+    this.running = true;
 
     if (!this.tag) {
       this.tag = this.serverName;
@@ -31,14 +34,22 @@ export class IngestComponent implements OnInit {
     const existingTags = await this.dbService.getAllTags();
     if (existingTags.find(t => t.toLowerCase() === this.tag.toLowerCase())) {
       this.status = ['Tag already exists. Please enter a new tag name.'];
+      this.running = false;
       return;
     }
 
     this.status = [];
 
-    const providerNames = await new Promise<any[]>(resolve =>
-      this.eventutils.getProviderNames({ serverName: this.serverName }, (err, names) => resolve(names)));
+    const getNamesResult = await new Promise<{names: string[], error: any}>(resolve =>
+      this.eventutils.getProviderNames({ serverName: this.serverName }, (err, names: string[]) => resolve({ names: names, error: err})));
 
+    if (getNamesResult.error) {
+      this.status = [getNamesResult.error.toString()];
+      this.running = false;
+      return;
+    }
+
+    const providerNames = getNamesResult.names;
     this.status.push(`Providers: ${providerNames.length} `);
 
     let messageCount = 0;
@@ -68,6 +79,7 @@ export class IngestComponent implements OnInit {
     }
 
     this.status.push('Done!');
+    this.running = false;
 
   }
 

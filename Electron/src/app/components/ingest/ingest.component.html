@@ -2,14 +2,14 @@
   <div class="control-container">
     <div>
       <label>Server Name</label>
-      <input [(ngModel)]="serverName">
+      <input [(ngModel)]="serverName" [disabled]="running">
     </div>
     <div>
       <label>Tag</label>
-      <input [(ngModel)]="tag">
+      <input [(ngModel)]="tag" [disabled]="running">
     </div>
     <div>
-      <button (click)="ingestAllProviders()">Read Event Provider Data</button>
+      <button (click)="ingestAllProviders()" [disabled]="running">Read Event Provider Data</button>
     </div>
   </div>
   <div class="filler"></div>
