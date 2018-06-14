@@ -43,29 +43,23 @@ export class EventLogService {
 
     loadActiveLog(logName: string, serverName: string) {
         // Get an event reader delegate
-        this.eventUtils.getActiveEventLogReader(
-            { logName, serverName },
-            async (err, result: { reader: any, count: number }) => { // Note we get both the reader and count here
-                this.loadEventsFromReaderDelegate(result);           // And pass the whole thing
-            });
+        const delegate: any = this.eventUtils.getActiveEventLogReader({ logName, serverName }, true);
+        this.loadEventsFromReaderDelegate(delegate);
     }
 
     loadLogFromFile(file: string) {
         // Get an event reader delegate
-        this.eventUtils.getEventLogFileReader(
-            { file },
-            async (err, result: { reader: any, count: number }) => { // Note we get both the reader and count here
-                this.loadEventsFromReaderDelegate(result);           // And pass the whole thing
-            });
+        const delegate: any = this.eventUtils.getEventLogFileReader({ file }, true);
+        this.loadEventsFromReaderDelegate(delegate);
     }
 
     /**
      * Calls the delegate until there are no more events
      * and updates progress while doing so.
      */
-    private loadEventsFromReaderDelegate(result: { reader: any }) {
+    private loadEventsFromReaderDelegate(delegate: any) {
 
-        const reader = result.reader;
+        const reader = delegate;
 
         // Create an observable that will emit the events
         const resultObserver: Observable<any[]> =
@@ -90,14 +84,6 @@ export class EventLogService {
                 while (results !== null) {
                     // Emit this set of results
                     o.next(results);
-
-                    // Await a 1 millisecond timeout in order to allow the view
-                    // to render. It seems that if the zone flips to Stable and
-                    // then immediately back to Unstable when go to grab the
-                    // next set of results, the view gets no time to render in
-                    // between, so no records are visible until we are completely
-                    // done loading. To avoid that issue, we await here.
-                    await new Promise(resolve => setTimeout(resolve, 1));
 
                     // Now grab the next batch
                     results = await resultReader();
