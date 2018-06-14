@@ -17,4 +17,16 @@ export class EventUtils {
         typeName: 'EventLogExpert.EventReader',
         methodName: 'GetEventLogFileReader'
     });
+
+    getProviderNames = this.electronSvc.edge.func({
+        assemblyFile: 'EventLogExpert.dll',
+        typeName: 'EventLogExpert.ProviderReader',
+        methodName: 'GetProviderNames'
+    });
+
+    loadProviderMessages = this.electronSvc.edge.func({
+        assemblyFile: 'EventLogExpert.dll',
+        typeName: 'EventLogExpert.ProviderReader',
+        methodName: 'LoadProviderMessages'
+    });
 }

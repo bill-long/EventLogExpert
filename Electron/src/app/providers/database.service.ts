@@ -6,6 +6,7 @@ const DATABASE_NAME = 'messagesDb';
 const OBJECTSTORE_NAME = 'messages';
 const RAWID_INDEX = 'RawId, ProviderName';
 const SHORTID_INDEX = 'ShortId, ProviderName';
+const TAG_INDEX = 'Tag';
 
 @Injectable({
   providedIn: 'root'
@@ -35,6 +36,7 @@ export class DatabaseService {
 
       objectStore.createIndex(RAWID_INDEX, ['RawId', 'ProviderName'], { unique: false });
       objectStore.createIndex(SHORTID_INDEX, ['ShortId', 'ProviderName'], { unique: false });
+      objectStore.createIndex(TAG_INDEX, ['Tag'], { unique: false });
     };
   }
 
@@ -73,6 +75,25 @@ export class DatabaseService {
 
   getAllMessages$() {
     return from(this.getAllMessages());
+  }
+
+  getAllTags() {
+    return new Promise<string[]>(resolve => {
+      const tags = [];
+      this.db.transaction(OBJECTSTORE_NAME)
+        .objectStore(OBJECTSTORE_NAME)
+        .index(TAG_INDEX)
+        .openKeyCursor(null, 'nextunique')
+        .onsuccess = (ev: any) => {
+          const cursor = ev.target.result;
+          if (cursor) {
+            tags.push(cursor.key[0]);
+            cursor.continue();
+          } else {
+            resolve(tags);
+          }
+        };
+    });
   }
 
   deleteAllMessages() {

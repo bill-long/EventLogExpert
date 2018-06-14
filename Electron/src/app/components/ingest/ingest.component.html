@@ -1,0 +1,19 @@
+<div class="modal-container">
+  <div class="control-container">
+    <div>
+      <label>Server Name</label>
+      <input [(ngModel)]="serverName">
+    </div>
+    <div>
+      <label>Tag</label>
+      <input [(ngModel)]="tag">
+    </div>
+    <div>
+      <button (click)="ingestAllProviders()">Read Event Provider Data</button>
+    </div>
+  </div>
+  <div class="filler"></div>
+  <div class="status-bar">
+    <div *ngFor="let s of status">{{s}}</div>
+  </div>
+</div>

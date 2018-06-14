@@ -1,0 +1,65 @@
+.modal-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.control-container {
+    flex: 0 1 auto;
+    display: flex;
+    align-items: center;
+}
+
+.control-container > div {
+    display: flex;
+    flex-direction: column;
+    margin: 20px 0 0 20px;
+}
+
+input {
+    margin-top: 5px;
+}
+
+button {
+    height: 43px;
+    background: rgb(60, 100, 231);
+    color: white;
+    border: none;
+    min-width: 130px;
+}
+
+button:disabled {
+    background: grey;
+}
+
+button:active {
+    background: #9CDCFE;
+}
+
+button:hover {
+    background: #9CDCFE;
+}
+
+button:focus {
+    outline: none;
+}
+
+.filler {
+    flex: 1 1 auto;
+}
+
+.status-bar {
+    flex: 0 1 24px;
+    height: 24px;
+    display: flex;
+    flex-direction: row;
+    background-color: rgb(60, 100, 231);
+    color: white;
+    align-items: center;
+    overflow: hidden;
+  }
+  
+.status-bar > div {
+    white-space: nowrap;
+    margin-left: 10px;
+}
