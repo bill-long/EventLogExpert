@@ -1,6 +1,8 @@
 import { Menu, MenuItem, BrowserWindow, dialog, OpenDialogOptions } from 'electron';
 import { EventLogExpertWindowManager } from './eventlogexpert.windowmanager';
 import isDev = require('electron-is-dev');
+import * as url from 'url';
+import * as path from 'path';
 
 export class EventLogExpertMenu {
 
@@ -76,16 +78,33 @@ export class EventLogExpertMenu {
   }
 
   private ingestProviders(menuItem, window: BrowserWindow, ev: Event) {
-    // TODO
+    const ingestWindow = new BrowserWindow({ parent: window, modal: true, show: false, width: 610, height: 150, autoHideMenuBar: true });
+    // ingestWindow.setMenu(null);
+    if (this.windowManager.isServing()) {
+      require('electron-reload')(__dirname, {
+        electron: require(`${__dirname}/node_modules/electron`)
+      });
+      ingestWindow.loadURL('http://localhost:4200/#/ingest');
+    } else {
+      ingestWindow.loadURL(url.format({
+        pathname: path.join(__dirname, 'dist/index.html/#/ingest'),
+        protocol: 'file:',
+        slashes: true
+      }));
+    }
+    ingestWindow.once('ready-to-show', () => ingestWindow.show());
   }
 
   private openActiveLog(menuItem: MenuItem, window: BrowserWindow, ev: Event) {
 
     if (!this.windowManager.hasOpenLog(window)) {
       this.windowManager.setOpenLog(window, menuItem.label);
+      window.setTitle(`EventLogExpert ${menuItem.label}`);
       window.webContents.send('openActiveLog', menuItem.label, null);
     } else {
       const newWindow = this.windowManager.createWindow();
+      newWindow.setTitle(`EventLogExpert ${menuItem.label}`);
+      newWindow.on('page-title-updated', (event, title) => ev.preventDefault());
       newWindow.webContents.once('dom-ready', () => {
         newWindow.webContents.send('openActiveLog', menuItem.label, null);
         this.windowManager.setOpenLog(newWindow, menuItem.label);
@@ -108,15 +127,18 @@ export class EventLogExpertMenu {
 
     if (!this.windowManager.hasOpenLog(window)) {
       this.windowManager.setOpenLog(window, files[0]);
+      window.setTitle(`EventLogExpert ${files[0]}`);
+      window.on('page-title-updated', (event, title) => event.preventDefault());
       window.webContents.send('openLogFromFile', files[0], null);
     } else {
       const newWindow = this.windowManager.createWindow();
+      newWindow.setTitle(`EventLogExpert ${files[0]}`);
+      newWindow.on('page-title-updated', (event, title) => event.preventDefault());
       this.windowManager.setOpenLog(newWindow, files[0]);
       newWindow.webContents.once('dom-ready', () => {
         newWindow.webContents.send('openLogFromFile', files[0], null);
       });
     }
-
   }
 
 }

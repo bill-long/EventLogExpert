@@ -85,4 +85,6 @@ export class EventLogExpertWindowManager {
     }
 
     public windowCount() { return this.openWindows.length; }
+
+    public isServing() { return this.serve; }
 }

@@ -23,6 +23,7 @@ import { EventLogService } from './providers/eventlog.service';
 import { EventUtils } from './providers/eventutils.service';
 import { DatabaseService } from './providers/database.service';
 import { ScrollbarComponent } from './components/scrollbar/scrollbar.component';
+import { IngestComponent } from './components/ingest/ingest.component';
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -34,7 +35,8 @@ export function HttpLoaderFactory(http: HttpClient) {
     AppComponent,
     HomeComponent,
     WebviewDirective,
-    ScrollbarComponent
+    ScrollbarComponent,
+    IngestComponent
   ],
   imports: [
     BrowserModule,

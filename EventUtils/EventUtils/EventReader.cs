@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.Linq;
+using System.Runtime.Remoting.Channels;
 using System.Threading.Tasks;
 
 namespace EventLogExpert
@@ -21,18 +22,25 @@ namespace EventLogExpert
     {
         private const int BatchSize = 1000;
 
-        public async Task<object> GetActiveEventLogReader(dynamic input)
+        /// <summary>
+        /// Note this method is synchronous and must be called synchronously
+        /// from NodeJS.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns>A delegate that must be called asychronously from NodeJS</returns>
+        public Task<object> GetActiveEventLogReader(dynamic input)
         {
             var logName = input.logName;
             var reader = new EventLogReader(logName, PathType.LogName);
             var readComplete = false;
 
-            return new
+            // The delegate returned is async
+            return Task.FromResult((object) (Func<object, Task<object>>) (async o =>
             {
-                reader = (Func<object, Task<object>>) (async o =>
-                {
-                    if (readComplete) return null;
+                if (readComplete) return null;
 
+                return await Task<object>.Factory.StartNew(() =>
+                {
                     var count = 0;
                     var events = new List<object>();
                     EventRecord evt;
@@ -60,22 +68,29 @@ namespace EventLogExpert
                     }
 
                     return events;
-                })
-            };
+                });
+            }));
         }
 
-        public async Task<object> GetEventLogFileReader(dynamic input)
+        /// <summary>
+        /// Note this method is synchronous and must be called synchronously
+        /// from NodeJS.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <returns>A delegate that must be called asychronously from NodeJS</returns>
+        public Task<object> GetEventLogFileReader(dynamic input)
         {
             var file = input.file;
             var reader = new EventLogReader(file, PathType.FilePath);
             var readComplete = false;
 
-            return new
+            // The delegate returned is async
+            return Task.FromResult((object) (Func<object, Task<object>>) (async o =>
             {
-                reader = (Func<object, Task<object>>) (async o =>
-                {
-                    if (readComplete) return null;
+                if (readComplete) return null;
 
+                return await Task<object>.Factory.StartNew(() =>
+                {
                     var count = 0;
                     var events = new List<object>();
                     EventRecord evt;
@@ -102,8 +117,8 @@ namespace EventLogExpert
                     }
 
                     return events;
-                })
-            };
+                });
+            }));
         }
     }
 }
