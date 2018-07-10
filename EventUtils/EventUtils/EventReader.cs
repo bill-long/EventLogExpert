@@ -57,6 +57,9 @@ namespace EventLogExpert
                             evt.TimeCreated,
                             evt.ProviderName,
                             evt.Task,
+                            evt.Opcode,
+                            User = evt.UserId.Value,
+                            evt.RecordId,
                             Properties = evt.Properties.Select(p => p.Value)
                         });
                     }

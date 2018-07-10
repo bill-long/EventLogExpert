@@ -1,0 +1,17 @@
+.outer-container {
+    display: flex;
+    flex: 1;
+    height: 100%;
+}
+
+.event-properties {
+    display: grid;
+    grid-template-columns: 100px 250px 100px 250px;
+    margin-bottom: 5px;
+}
+
+.event-detail {
+    padding: 10px 0px 0px 10px;
+    width: calc(100% - 10px);
+    overflow: hidden;
+}

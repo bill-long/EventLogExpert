@@ -3,6 +3,7 @@
   display: flex;
   flex-direction: column;
   margin: 0;
+  overflow-y: hidden;
 }
 
 .filter-pane {
@@ -16,6 +17,9 @@
 }
 
 .expander {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   background-color: rgb(60, 100, 231);
   color: white;
   width: 100%;
@@ -29,10 +33,12 @@
 
 .expander-closed {
   transform: rotate(90deg) scaleY(1.5);
+  width: 24px;
 }
 
 .expander-open {
   transform: rotate(-90deg) scaleY(1.5);
+  width: 24px;
 }
 
 .main-area {
@@ -86,4 +92,14 @@ td {
 
 th.table-divider {
   cursor: col-resize;
+}
+
+tr.focused {
+  background-color: black;
+}
+
+.detail-divider {
+  height: 5px;
+  background: black;
+  cursor: row-resize;
 }

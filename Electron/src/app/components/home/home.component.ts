@@ -1,7 +1,8 @@
 import { Component, ChangeDetectionStrategy, AfterViewInit, HostListener } from '@angular/core';
-import { Observable, combineLatest, Subject } from 'rxjs';
+import { Observable, combineLatest, Subject, ReplaySubject } from 'rxjs';
 import { map, share } from 'rxjs/operators';
 import { EventLogService, State } from '../../providers/eventlog.service';
+import { EventRecord } from '../../providers/eventlog.models';
 
 @Component({
   selector: 'app-home',
@@ -20,8 +21,13 @@ export class HomeComponent implements AfterViewInit {
   lastWheelMove: number;
   columnWidths: { [name: string]: number };
   dragData: { mouseX: number, column: string };
+  detailDividerDragData: { mouseY: number };
+  detailHeight = 200;
+  detailHeightChange$ = new Subject<number>();
   sortProperty: 'Time';
   sortAscending: true;
+  lastFocusedEvent: EventRecord;
+  focusedEvent$ = new ReplaySubject<EventRecord>(1);
 
   constructor(private eventLogService: EventLogService) {
     this.renderOffset = 0;
@@ -31,9 +37,10 @@ export class HomeComponent implements AfterViewInit {
     this.columnWidths = {
       'Time': 165,
       'Id': 50,
-      'Machine': 60,
-      'Level': 150,
-      'Provider': 250
+      'Machine': 100,
+      'Level': 100,
+      'Source': 250,
+      'Task Category': 150
     };
 
     // In order to provide a good experience when the user loads up an event log with
@@ -59,11 +66,16 @@ export class HomeComponent implements AfterViewInit {
 
   ngAfterViewInit() {
     this.wheelMovement.next(null);
+    this.focusedEvent$.next(null);
   }
 
   onMouseDown(evt: any) {
     const colName = evt.currentTarget.previousSibling.childNodes[0].nodeValue;
     this.dragData = { mouseX: evt.clientX, column: colName };
+  }
+
+  onDetailDividerMouseDown(evt: any) {
+    this.detailDividerDragData = { mouseY: evt.clientY };
   }
 
   @HostListener('window:mousemove', ['$event'])
@@ -74,12 +86,20 @@ export class HomeComponent implements AfterViewInit {
       if (width < 10) { width = 10; }
       this.columnWidths[this.dragData.column] = width;
       this.dragData.mouseX = evt.clientX;
+    } else if (this.detailDividerDragData != null) {
+      const difference = this.detailDividerDragData.mouseY - evt.clientY;
+      let height = this.detailHeight + difference;
+      if (height < 200) { height = 200; }
+      this.detailHeight = height;
+      this.detailHeightChange$.next(height);
+      this.detailDividerDragData.mouseY = evt.clientY;
     }
   }
 
   @HostListener('window:mouseup')
   onMouseUp() {
     this.dragData = null;
+    this.detailDividerDragData = null;
   }
 
   onScrollbar(newPosition: number) {
@@ -89,6 +109,16 @@ export class HomeComponent implements AfterViewInit {
 
   onWheel(evt: WheelEvent) {
     this.wheelMovement.next(evt);
+  }
+
+  setFocusedEvent(evt: EventRecord) {
+    if (this.lastFocusedEvent) {
+      this.lastFocusedEvent.isFocused = false;
+    }
+
+    this.lastFocusedEvent = evt;
+    evt.isFocused = true;
+    this.focusedEvent$.next(evt);
   }
 
 }

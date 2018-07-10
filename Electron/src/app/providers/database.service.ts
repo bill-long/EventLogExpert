@@ -1,9 +1,12 @@
 import { Injectable } from '@angular/core';
+import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
 import { from } from 'rxjs';
+import { Message } from './database.models';
 
 const DATABASE_NAME = 'messagesDb';
-const OBJECTSTORE_NAME = 'messages';
+const MESSAGES_OBJECTSTORE_NAME = 'messages';
+const TAGS_OBJECTSTORE_NAME = 'tags';
 const RAWID_INDEX = 'RawId, ProviderName';
 const SHORTID_INDEX = 'ShortId, ProviderName';
 const TAG_INDEX = 'Tag';
@@ -11,9 +14,23 @@ const TAG_INDEX = 'Tag';
 @Injectable({
   providedIn: 'root'
 })
+/**
+ * Exposes a simple API for interacting with the database where we store
+ * the messages we have ingested from the various providers.
+ *
+ * Currently, we keep two object stores:
+ *
+ * messages - this stores the messages themselves, including things like
+ *  event ID, provider name, and the user-supplied tag
+ *
+ * tags - we need to store tags separate for performance, since it is far
+ *  too slow to look up all the unique tags from the messages store, so
+ *  we store those here.
+ */
 export class DatabaseService {
 
   db: IDBDatabase;
+  tagsCache: string[];
 
   constructor(private electronService: ElectronService) {
     const openReq = indexedDB.open(DATABASE_NAME, 1);
@@ -21,34 +38,50 @@ export class DatabaseService {
       console.log(`Failed to open ${DATABASE_NAME}`, ev);
     };
 
-    openReq.onsuccess = (ev: any) => {
+    openReq.onsuccess = async (ev: any) => {
       this.db = ev.target.result;
+      this.tagsCache = await this.getAllTags();
     };
 
     openReq.onupgradeneeded = (ev: any) => {
       this.db = ev.target.result;
-      let objectStore;
+      let messagesObjectStore;
       if (ev.oldVersion < 1) {
-        objectStore = this.db.createObjectStore(OBJECTSTORE_NAME, { autoIncrement: true });
+        messagesObjectStore = this.db.createObjectStore(MESSAGES_OBJECTSTORE_NAME, { autoIncrement: true });
+        this.db.createObjectStore(TAGS_OBJECTSTORE_NAME, { autoIncrement: true });
       } else {
-        objectStore = ev.target.transaction.objectStore(OBJECTSTORE_NAME);
+        messagesObjectStore = ev.target.transaction.objectStore(MESSAGES_OBJECTSTORE_NAME);
       }
 
-      objectStore.createIndex(RAWID_INDEX, ['RawId', 'ProviderName'], { unique: false });
-      objectStore.createIndex(SHORTID_INDEX, ['ShortId', 'ProviderName'], { unique: false });
-      objectStore.createIndex(TAG_INDEX, ['Tag'], { unique: false });
+      messagesObjectStore.createIndex(RAWID_INDEX, ['RawId', 'ProviderName'], { unique: false });
+      messagesObjectStore.createIndex(SHORTID_INDEX, ['ShortId', 'ProviderName'], { unique: false });
+      messagesObjectStore.createIndex(TAG_INDEX, ['Tag'], { unique: false });
     };
   }
 
+  /**
+   * Add messages to the database.
+   * @param messages The messages to add. Note the tag must be the same on all of them.
+   */
   addMessages(messages: any[]) {
-    return new Promise<number>(resolve => {
+    return new Promise<number>(async resolve => {
+      if (this.tagsCache.indexOf(messages[0].Tag) < 0) {
+        const addTagResult = await this.addTag({ name: messages[0].Tag });
+        if (addTagResult === null) {
+          console.log('Failed to add tag:', messages[0].Tag);
+          resolve(0);
+        }
+
+        this.tagsCache.push(messages[0].Tag);
+      }
+
       let itemsAdded = 0;
-      const transaction = this.db.transaction(OBJECTSTORE_NAME, 'readwrite');
+      const transaction = this.db.transaction(MESSAGES_OBJECTSTORE_NAME, 'readwrite');
       transaction.oncomplete = ev => resolve(itemsAdded);
       transaction.onerror = ev => resolve(itemsAdded);
-      const messageStore = transaction.objectStore(OBJECTSTORE_NAME);
+      const messageStore = transaction.objectStore(MESSAGES_OBJECTSTORE_NAME);
       messages.forEach(m => {
-        const req = messageStore.add(m);
+        messageStore.add(m);
         itemsAdded++;
       });
     });
@@ -58,10 +91,20 @@ export class DatabaseService {
     return from(this.addMessages(messages));
   }
 
+  addTag(tag: { name: string }) {
+    return new Promise<string>(resolve => {
+      const transaction = this.db.transaction(TAGS_OBJECTSTORE_NAME, 'readwrite');
+      transaction.oncomplete = ev => resolve(tag.name);
+      transaction.onerror = ev => resolve(null);
+      const tagStore = transaction.objectStore(TAGS_OBJECTSTORE_NAME);
+      const req = tagStore.add(tag);
+    });
+  }
+
   getAllMessages() {
     return new Promise<any[]>(resolve => {
       const messages = [];
-      this.db.transaction(OBJECTSTORE_NAME).objectStore(OBJECTSTORE_NAME).openCursor().onsuccess = (ev: any) => {
+      this.db.transaction(MESSAGES_OBJECTSTORE_NAME).objectStore(MESSAGES_OBJECTSTORE_NAME).openCursor().onsuccess = (ev: any) => {
         const cursor = ev.target.result;
         if (cursor) {
           messages.push(cursor.value);
@@ -80,14 +123,13 @@ export class DatabaseService {
   getAllTags() {
     return new Promise<string[]>(resolve => {
       const tags = [];
-      this.db.transaction(OBJECTSTORE_NAME)
-        .objectStore(OBJECTSTORE_NAME)
-        .index(TAG_INDEX)
-        .openKeyCursor(null, 'nextunique')
+      this.db.transaction(TAGS_OBJECTSTORE_NAME)
+        .objectStore(TAGS_OBJECTSTORE_NAME)
+        .openCursor()
         .onsuccess = (ev: any) => {
           const cursor = ev.target.result;
           if (cursor) {
-            tags.push(cursor.key[0]);
+            tags.push(cursor.value.name);
             cursor.continue();
           } else {
             resolve(tags);
@@ -98,8 +140,8 @@ export class DatabaseService {
 
   deleteAllMessages() {
     return new Promise(resolve => {
-      this.db.transaction(OBJECTSTORE_NAME, 'readwrite')
-        .objectStore(OBJECTSTORE_NAME)
+      this.db.transaction(MESSAGES_OBJECTSTORE_NAME, 'readwrite')
+        .objectStore(MESSAGES_OBJECTSTORE_NAME)
         .clear()
         .onsuccess = (ev) => resolve();
     });
@@ -131,25 +173,32 @@ export class DatabaseService {
    * @param id The RawID of the event
    * @param useRawId Whether we should try to match on RawId or ShortId
    */
-  private getMessages(providerName: string, id: number, useRawId: boolean) {
+  private getMessages(providerName: string, id: number, useRawId: boolean): Promise<Message[]> {
     return new Promise<any[]>(resolve => {
+      const start = performance.now();
       const range = IDBKeyRange.only([id, providerName]);
-      const results = [];
-      const index = this.db.transaction(OBJECTSTORE_NAME)
-        .objectStore(OBJECTSTORE_NAME)
+      const results: Message[] = [];
+      this.db.transaction(MESSAGES_OBJECTSTORE_NAME)
+        .objectStore(MESSAGES_OBJECTSTORE_NAME)
         .index(useRawId ? RAWID_INDEX : SHORTID_INDEX)
         .openCursor(range)
-        .onsuccess = (ev: any) => {
+        .onsuccess = async (ev: any) => {
           const cursor = ev.target.result;
           if (cursor) {
             results.push(cursor.value);
             cursor.continue();
           } else {
             if (results.length < 1 && useRawId) {
-              this.getMessages(providerName, id, false).then(shortIdResult => resolve(shortIdResult));
-            } else {
-              resolve(results);
+              const shortIdResult = await this.getMessages(providerName, id, false);
+              shortIdResult.forEach(s => results.push(s));
             }
+
+            if (!AppConfig.production) {
+              const end = performance.now();
+              console.log('getMessages finished', end - start, providerName, id, useRawId, results);
+            }
+
+            resolve(results);
           }
         };
     });
