@@ -104,7 +104,7 @@ export class EventLogExpertMenu {
     } else {
       const newWindow = this.windowManager.createWindow();
       newWindow.setTitle(`EventLogExpert ${menuItem.label}`);
-      newWindow.on('page-title-updated', (event, title) => ev.preventDefault());
+      newWindow.on('page-title-updated', (event, title) => event.preventDefault());
       newWindow.webContents.once('dom-ready', () => {
         newWindow.webContents.send('openActiveLog', menuItem.label, null);
         this.windowManager.setOpenLog(newWindow, menuItem.label);
