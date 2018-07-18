@@ -1,3 +1,3 @@
-<div *ngIf="rowcount" id="scroll-bar">
-  <div id="cursor" [ngStyle]="{ 'top': padding + 'px' }" (mousedown)="onMouseDown($event)"></div>
+<div *ngIf="rowcount && rowcount > rowsVisible" id="scroll-bar">
+  <div id="cursor" [ngStyle]="{ 'top': padding + 'px', 'height': cursorSize + 'px' }" (mousedown)="onMouseDown($event)"></div>
 </div>

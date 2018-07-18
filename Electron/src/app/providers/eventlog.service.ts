@@ -4,21 +4,29 @@ import { scan, share, filter } from 'rxjs/operators';
 import { Injectable, NgZone } from '@angular/core';
 import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
+import { DatabaseService } from './database.service';
+import { EventRecord } from './eventlog.models';
 
 @Injectable()
 export class EventLogService {
 
     actions$: Subject<Action>;
     state$: Observable<State>;
+    messageCache: {};
+    formatRegexp = new RegExp(/%([0-9]+)/g);
 
-    constructor(private eventUtils: EventUtils, private ngZone: NgZone, private electronSvc: ElectronService) {
+    constructor(private eventUtils: EventUtils, private ngZone: NgZone,
+        private electronSvc: ElectronService, private dbService: DatabaseService) {
+
+        console.log('DbService', dbService);
+        this.messageCache = {};
         const initState: State = { loading: false, name: null, records: [] };
         this.actions$ = new Subject();
         this.state$ = this.actions$.pipe(scan(reducer, initState), share());
 
-        if (!AppConfig.production) {
+        /*if (!AppConfig.production) {
             this.state$.subscribe(s => console.log(s));
-        }
+        }*/
 
         // Listen for notifications from Main process
         electronSvc.ipcRenderer.on('openActiveLog',
@@ -80,13 +88,51 @@ export class EventLogService {
                 };
 
                 // Loop until there are no more results
-                let results = await resultReader();
-                while (results !== null) {
+                let records: EventRecord[] = await resultReader();
+                while (records !== null) {
+                    for (let i = 0; i < records.length; i++) {
+                        const r = records[i];
+
+                        // Set the level string
+                        switch (r.Level) {
+                            case '0':
+                                r.LevelName = 'Information';
+                                break;
+                            case '2':
+                                r.LevelName = 'Error';
+                                break;
+                            case '3':
+                                r.LevelName = 'Warning';
+                                break;
+                            case '4':
+                                r.LevelName = 'Information';
+                                break;
+                        }
+
+                        // Set the description string
+                        const m = await this.getMessage(r.ProviderName, r.Id);
+                        r.Description = this.formatDescription(r, m);
+
+                        // Set the task string
+                        if (r.Task) {
+                            r.TaskName = await this.getMessage(r.ProviderName, r.Task);
+                        } else {
+                            r.TaskName = 'None';
+                        }
+
+                        // Set the Opcode string
+                        if (r.Opcode) {
+                            r.OpcodeName = await this.getMessage(r.ProviderName, r.Opcode);
+                        } else {
+                            r.OpcodeName = '';
+                        }
+                    }
+
                     // Emit this set of results
-                    o.next(results);
+                    o.next(records);
 
                     // Now grab the next batch
-                    results = await resultReader();
+                    records = await resultReader();
                 }
 
                 // Complete
@@ -98,6 +144,43 @@ export class EventLogService {
             err => console.log(err),
             () => this.ngZone.run(() => this.actions$.next(new FinishedLoadingAction()))
         );
+    }
+
+    private async getMessage(providerName: string, messageNumber: number) {
+        if (this.messageCache[providerName] === undefined) {
+            this.messageCache[providerName] = {};
+        }
+
+        const messageFromCache = this.messageCache[providerName][messageNumber];
+        if (messageFromCache !== undefined) {
+            return messageFromCache;
+        } else {
+            const m = await this.dbService.findMessages(providerName, messageNumber);
+            if (m && m.length > 0) {
+                this.messageCache[providerName][messageNumber] = m[0].Text;
+                return m[0].Text;
+            } else {
+                this.messageCache[providerName][messageNumber] = '';
+                return '';
+            }
+        }
+    }
+
+    private formatDescription(record: any, messageFormat: string): string {
+        const matches = messageFormat.match(this.formatRegexp);
+        if (!matches || matches.length < 1) {
+            return messageFormat;
+        }
+
+        for (let i = 0; i < matches.length; i++) {
+            const propIndexStr = matches[i].substr(1);
+            const propIndex = parseInt(propIndexStr, 10) - 1;
+            if (record.Properties.length > propIndex) {
+                messageFormat = messageFormat.replace(matches[i], record.Properties[propIndex]);
+            }
+        }
+
+        return messageFormat;
     }
 }
 

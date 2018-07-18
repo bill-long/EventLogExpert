@@ -69,10 +69,8 @@ export class IngestComponent implements OnInit {
         messageCount += results.length;
         this.status[1] = `Messages: ${messageCount}`;
         results.forEach(m => m.Tag = this.tag);
-        this.dbService.addMessages$(results).subscribe(
-          r => { savedCount += r; },
-          err => this.status[3] = `Error: ${err}`
-        );
+        const r = await this.dbService.addMessages(results);
+        savedCount += r;
       }
 
       this.status[2] = `Saved ${savedCount}`;

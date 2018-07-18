@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
+import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
 import { from } from 'rxjs';
+import { Message } from './database.models';
 
 const DATABASE_NAME = 'messagesDb';
 const MESSAGES_OBJECTSTORE_NAME = 'messages';
@@ -171,25 +173,32 @@ export class DatabaseService {
    * @param id The RawID of the event
    * @param useRawId Whether we should try to match on RawId or ShortId
    */
-  private getMessages(providerName: string, id: number, useRawId: boolean) {
+  private getMessages(providerName: string, id: number, useRawId: boolean): Promise<Message[]> {
     return new Promise<any[]>(resolve => {
+      const start = performance.now();
       const range = IDBKeyRange.only([id, providerName]);
-      const results = [];
-      const index = this.db.transaction(MESSAGES_OBJECTSTORE_NAME)
+      const results: Message[] = [];
+      this.db.transaction(MESSAGES_OBJECTSTORE_NAME)
         .objectStore(MESSAGES_OBJECTSTORE_NAME)
         .index(useRawId ? RAWID_INDEX : SHORTID_INDEX)
         .openCursor(range)
-        .onsuccess = (ev: any) => {
+        .onsuccess = async (ev: any) => {
           const cursor = ev.target.result;
           if (cursor) {
             results.push(cursor.value);
             cursor.continue();
           } else {
             if (results.length < 1 && useRawId) {
-              this.getMessages(providerName, id, false).then(shortIdResult => resolve(shortIdResult));
-            } else {
-              resolve(results);
+              const shortIdResult = await this.getMessages(providerName, id, false);
+              shortIdResult.forEach(s => results.push(s));
             }
+
+            if (!AppConfig.production) {
+              const end = performance.now();
+              console.log('getMessages finished', end - start, providerName, id, useRawId, results);
+            }
+
+            resolve(results);
           }
         };
     });
