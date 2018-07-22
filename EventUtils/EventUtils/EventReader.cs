@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.Eventing.Reader;
 using System.Linq;
-using System.Runtime.Remoting.Channels;
 using System.Threading.Tasks;
 
 namespace EventLogExpert
@@ -58,7 +57,7 @@ namespace EventLogExpert
                             evt.ProviderName,
                             evt.Task,
                             evt.Opcode,
-                            User = evt.UserId.Value,
+                            User = evt.UserId?.Value,
                             evt.RecordId,
                             Properties = evt.Properties.Select(p => p.Value)
                         });
@@ -109,6 +108,9 @@ namespace EventLogExpert
                             evt.TimeCreated,
                             evt.ProviderName,
                             evt.Task,
+                            evt.Opcode,
+                            User = evt.UserId?.Value,
+                            evt.RecordId,
                             Properties = evt.Properties.Select(p => p.Value)
                         });
                     }
