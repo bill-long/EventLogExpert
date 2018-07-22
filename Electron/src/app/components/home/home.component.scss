@@ -76,12 +76,14 @@ table {
 
 th {
   overflow: hidden;
+  cursor: default;
 }
 
 td {
   overflow: hidden;
   white-space: nowrap;
   padding-left: 5px;
+  cursor: default;
 }
 
 .table-divider {
