@@ -87,9 +87,10 @@ export class EventLogExpertMenu {
       ingestWindow.loadURL('http://localhost:4200/#/ingest');
     } else {
       ingestWindow.loadURL(url.format({
-        pathname: path.join(__dirname, 'dist/index.html/#/ingest'),
+        pathname: path.join(__dirname, 'dist/index.html'),
         protocol: 'file:',
-        slashes: true
+        slashes: true,
+        hash: '#/ingest'
       }));
     }
     ingestWindow.once('ready-to-show', () => ingestWindow.show());
