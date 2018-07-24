@@ -1,4 +1,5 @@
 import { BrowserWindow, screen } from 'electron';
+import isDev = require('electron-is-dev');
 import * as url from 'url';
 import * as path from 'path';
 
@@ -33,6 +34,10 @@ export class EventLogExpertWindowManager {
                 protocol: 'file:',
                 slashes: true
             }));
+        }
+
+        if (isDev) {
+            win.webContents.openDevTools();
         }
 
         // Emitted when the window is closed.

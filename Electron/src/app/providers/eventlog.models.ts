@@ -1,4 +1,5 @@
 export interface EventRecord {
+    LogName: string;
     ProviderName: string;
     TimeCreated: string;
     Id: number;
@@ -9,6 +10,7 @@ export interface EventRecord {
     User: string;
     Opcode: number;
     RecordId: number;
+    Properties: string[];
 
     Description: string;
     TaskName: string;
