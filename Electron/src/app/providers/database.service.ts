@@ -158,12 +158,12 @@ export class DatabaseService {
    * @param providerName The name of the event provider
    * @param id The raw ID of event.
    */
-  findMessages(providerName: string, id: number) {
-    return this.getMessages(providerName, id, true);
+  findMessages(providerName: string, id: number, logName: string) {
+    return this.getMessages(providerName, id, logName, true);
   }
 
-  findMessages$(providerName: string, id: number) {
-    return from(this.findMessages(providerName, id));
+  findMessages$(providerName: string, id: number, logName: string) {
+    return from(this.findMessages(providerName, id, logName));
   }
 
   /**
@@ -173,7 +173,7 @@ export class DatabaseService {
    * @param id The RawID of the event
    * @param useRawId Whether we should try to match on RawId or ShortId
    */
-  private getMessages(providerName: string, id: number, useRawId: boolean): Promise<Message[]> {
+  private getMessages(providerName: string, id: number, logName: string, useRawId: boolean): Promise<Message[]> {
     return new Promise<any[]>(resolve => {
       const start = performance.now();
       const range = IDBKeyRange.only([id, providerName]);
@@ -189,7 +189,7 @@ export class DatabaseService {
             cursor.continue();
           } else {
             if (results.length < 1 && useRawId) {
-              const shortIdResult = await this.getMessages(providerName, id, false);
+              const shortIdResult = await this.getMessages(providerName, id, logName, false);
               shortIdResult.forEach(s => results.push(s));
             }
 
@@ -198,7 +198,20 @@ export class DatabaseService {
               console.log('getMessages finished', end - start, providerName, id, useRawId, results);
             }
 
-            resolve(results);
+            // If a log name was provided...
+            if (logName) {
+              // Then return one with a matching log name if we can
+              const logNameMatches = results.filter(r => r.LogLink === logName);
+              if (logNameMatches.length > 0) {
+                resolve(logNameMatches);
+              } else {
+                resolve(results);
+              }
+            } else {
+              // If logName was not provided, then discard anything that has one
+              const noLogName = results.filter(r => r.LogLink === null);
+              resolve(noLogName);
+            }
           }
         };
     });

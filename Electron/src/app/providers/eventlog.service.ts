@@ -87,11 +87,20 @@ export class EventLogService {
                     });
                 };
 
+                const providerNames = {};
+                const taskNames = { None: true };
+                const ids = {};
+
                 // Loop until there are no more results
                 let records: EventRecord[] = await resultReader();
                 while (records !== null) {
                     for (let i = 0; i < records.length; i++) {
                         const r = records[i];
+
+                        // Add the id to unique ids
+                        if (!ids[r.Id]) {
+                            ids[r.Id] = true;
+                        }
 
                         // Set the level string
                         switch (r.Level) {
@@ -109,20 +118,29 @@ export class EventLogService {
                                 break;
                         }
 
+                        // Add provider to unique provider names
+                        if (!providerNames[r.ProviderName]) {
+                            providerNames[r.ProviderName] = true;
+                        }
+
                         // Set the description string
-                        const m = await this.getMessage(r.ProviderName, r.Id);
+                        const m = await this.getMessage(r.ProviderName, r.Id, r.LogName);
                         r.Description = this.formatDescription(r, m);
 
                         // Set the task string
                         if (r.Task) {
-                            r.TaskName = await this.getMessage(r.ProviderName, r.Task);
+                            r.TaskName = await this.getMessage(r.ProviderName, r.Task, null);
+                            // Add the task name to unique names
+                            if (!taskNames[r.TaskName]) {
+                                taskNames[r.TaskName] = true;
+                            }
                         } else {
                             r.TaskName = 'None';
                         }
 
                         // Set the Opcode string
                         if (r.Opcode) {
-                            r.OpcodeName = await this.getMessage(r.ProviderName, r.Opcode);
+                            r.OpcodeName = await this.getMessage(r.ProviderName, r.Opcode, null);
                         } else {
                             r.OpcodeName = '';
                         }
@@ -146,27 +164,31 @@ export class EventLogService {
         );
     }
 
-    private async getMessage(providerName: string, messageNumber: number) {
+    private async getMessage(providerName: string, messageNumber: number, logName: string) {
         if (this.messageCache[providerName] === undefined) {
             this.messageCache[providerName] = {};
         }
 
-        const messageFromCache = this.messageCache[providerName][messageNumber];
+        if (this.messageCache[providerName][messageNumber] === undefined) {
+            this.messageCache[providerName][messageNumber] = {};
+        }
+
+        const messageFromCache = this.messageCache[providerName][messageNumber][logName];
         if (messageFromCache !== undefined) {
             return messageFromCache;
         } else {
-            const m = await this.dbService.findMessages(providerName, messageNumber);
+            const m = await this.dbService.findMessages(providerName, messageNumber, logName);
             if (m && m.length > 0) {
-                this.messageCache[providerName][messageNumber] = m[0].Text;
+                this.messageCache[providerName][messageNumber][logName] = m[0].Text;
                 return m[0].Text;
             } else {
-                this.messageCache[providerName][messageNumber] = '';
+                this.messageCache[providerName][messageNumber][logName] = '';
                 return '';
             }
         }
     }
 
-    private formatDescription(record: any, messageFormat: string): string {
+    private formatDescription(record: EventRecord, messageFormat: string): string {
         const matches = messageFormat.match(this.formatRegexp);
         if (!matches || matches.length < 1) {
             return messageFormat;
@@ -218,18 +240,11 @@ export class LoadLogFromFile {
     constructor(public file: string) { }
 }
 
-export class LogLoadedAction {
-    type = 'LOG_LOADED';
-
-    constructor(public logName: string, public records: any[]) { }
-}
-
 export type Action =
     EventsLoadedAction |
     FinishedLoadingAction |
     LoadActiveLogAction |
-    LoadLogFromFile |
-    LogLoadedAction;
+    LoadLogFromFile;
 
 // Reducer
 
@@ -269,15 +284,6 @@ const reducer = (state: State, action: Action): State => {
                 records: []
             };
         }
-        case 'LOG_LOADED': {
-            const thisAction = action as LogLoadedAction;
-            return {
-                loading: false,
-                name: thisAction.logName,
-                records: thisAction.records
-            };
-        }
-
         default: {
             return state;
         }

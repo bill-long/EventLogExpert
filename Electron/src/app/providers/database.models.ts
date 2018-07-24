@@ -1,4 +1,5 @@
 export interface Message {
+    LogLink: string;
     ProviderName: string;
     RawId: number;
     ShortId: number;

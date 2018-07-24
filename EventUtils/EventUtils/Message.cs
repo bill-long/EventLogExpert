@@ -9,6 +9,11 @@
     public class Message
     {
         /// <summary>
+        ///     The log name that this event will appear in.
+        /// </summary>
+        public string LogLink { get; set; }
+
+        /// <summary>
         ///     The provider name for this message
         /// </summary>
         public string ProviderName { get; set; }
