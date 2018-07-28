@@ -8,12 +8,7 @@
 
 .filter-pane {
   background-color: #353535;
-}
-
-.filters {
-  height: 300px;
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  user-select: none;
 }
 
 .expander {
@@ -41,10 +36,10 @@
   width: 24px;
 }
 
-.main-area {
+app-event-table {
   flex: 1;
   overflow-y: hidden;
-  display: flex;
+  user-select: none;
 }
 
 .status-bar {
@@ -58,46 +53,6 @@
 
 .status-bar > div {
   margin-left: 10px;
-}
-
-tr:nth-child(odd) {
-  background-color: #353535;
-}
-
-tr:hover {
-  background-color: black;
-}
-
-table {
-  border-spacing: 0;
-  table-layout: fixed;
-  width: calc(100% - 10px);
-}
-
-th {
-  overflow: hidden;
-  cursor: default;
-}
-
-td {
-  overflow: hidden;
-  white-space: nowrap;
-  padding-left: 5px;
-  cursor: default;
-}
-
-.table-divider {
-  background: #111111;
-  color: #111111;
-  width: 2px;
-}
-
-th.table-divider {
-  cursor: col-resize;
-}
-
-tr.focused {
-  background-color: black;
 }
 
 .detail-divider {

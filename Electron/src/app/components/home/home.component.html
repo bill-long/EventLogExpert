@@ -1,4 +1,4 @@
-<div class="home-container">
+<div class="home-container" *ngIf="state$ | async as state">
   <div class="filter-pane">
     <div class="expander" *ngIf="!filterPaneExpanded" (click)="filterPaneExpanded = true">
       <div class="expander-closed">»</div>
@@ -7,55 +7,14 @@
       <div class="expander" (click)="filterPaneExpanded = false">
         <div class="expander-open">»</div>
       </div>
-      <div class="filters" *ngIf="filterPaneExpanded">
-        <div>Filter</div>
-        <div>Things</div>
-        <div>Go</div>
-        <div>Here</div>
-      </div>
+      <app-filterpane></app-filterpane>
     </div>
   </div>
-  <div class="main-area" (wheel)="onWheel($event)">
-    <table *ngIf="rows$ | async as rows">
-      <thead>
-        <th nowrap [ngStyle]="{ 'width': columnWidths['Time'] + 'px' }">Time</th>
-        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
-        <th nowrap [ngStyle]="{ 'width': columnWidths['Id'] + 'px' }">Id</th>
-        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
-        <th nowrap [ngStyle]="{ 'width': columnWidths['Machine'] + 'px' }">Machine</th>
-        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
-        <th nowrap [ngStyle]="{ 'width': columnWidths['Level'] + 'px' }">Level</th>
-        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
-        <th nowrap [ngStyle]="{ 'width': columnWidths['Source'] + 'px' }">Source</th>
-        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
-        <th nowrap [ngStyle]="{ 'width': columnWidths['Task Category'] + 'px' }">Task Category</th>
-        <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
-        <th nowrap>Description</th>
-      </thead>
-      <tbody>
-        <tr *ngFor="let evt of rows" (click)="setFocusedEvent(evt)" [ngClass]="{'focused': evt.isFocused}">
-          <td nowrap [ngStyle]="{ 'width': columnWidths['Time'] + 'px' }">{{evt.TimeCreated | date:'medium'}}</td>
-          <td class="table-divider"></td>
-          <td>{{evt.Id}}</td>
-          <td class="table-divider"></td>
-          <td>{{evt.MachineName}}</td>
-          <td class="table-divider"></td>
-          <td>{{evt.LevelName}}</td>
-          <td class="table-divider"></td>
-          <td>{{evt.ProviderName}}</td>
-          <td class="table-divider"></td>
-          <td>{{evt.TaskName}}</td>
-          <td class="table-divider"></td>
-          <td>{{evt.Description}}</td>
-        </tr>
-      </tbody>
-    </table>
-    <app-scrollbar [rowcount]="(state$ | async)?.records.length" [position]="renderOffset" [rowsVisible]="1" (updatePosition)="onScrollbar($event)"></app-scrollbar>
-  </div>
+  <app-event-table></app-event-table>
   <div class="detail-divider" (mousedown)="onDetailDividerMouseDown($event)"></div>
-  <app-event-detail *ngIf="lastFocusedEvent" [focusedEvent$]="focusedEvent$" [ngStyle]="{ 'height': detailHeight + 'px' }" [heightChange$]="detailHeightChange$"></app-event-detail>
+  <app-event-detail [hidden]="!state.focusedEvent" [ngStyle]="{ 'height': detailHeight + 'px' }" [heightChange$]="detailHeightChange$"></app-event-detail>
   <div class="status-bar">
-    <div *ngIf="(state$ | async)?.records.length">Records: {{(state$ | async)?.records.length}}</div>
-    <div *ngIf="rows$ | async">Position: {{renderOffset + 1}}</div>
+    <div *ngIf="state.records.length">Records: {{state.records.length}}</div>
+    <div *ngIf="state.recordsFiltered.length">Visible: {{state.recordsFiltered.length}}</div>
   </div>
 </div>

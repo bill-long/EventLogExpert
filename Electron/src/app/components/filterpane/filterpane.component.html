@@ -1,0 +1,14 @@
+<div class="filters" *ngIf="form" [formGroup]="form">
+  <app-filter [title]="'Sources'" [form]="sources" [filter]="(eventLogService.state$ | async)?.filter?.providerFilter"></app-filter>
+  <app-filter [title]="'Categories'" [form]="tasks" [filter]="(eventLogService.state$ | async)?.filter?.taskFilter"></app-filter>
+  <app-filter [title]="'Event IDs'" [form]="ids" [filter]="(eventLogService.state$ | async)?.filter?.idFilter"></app-filter>
+  <app-filter [title]="'Severity'" [form]="levels" [filter]="(eventLogService.state$ | async)?.filter?.levelFilter"></app-filter>
+  <div class="button-div">
+    <button (click)="applyCurrentFilter()">Apply Filter</button>
+    <button (click)="resetFilter()">Clear Filter</button>
+    <div class="recent-filters" *ngIf="recentFilters && recentFilters.length">
+      <div class="recent-filters-title">Recent Filters</div>
+      <button *ngFor="let filter of recentFilters" (click)="applySavedFilter(filter)">{{filter}}</button>
+    </div>
+  </div>
+</div>

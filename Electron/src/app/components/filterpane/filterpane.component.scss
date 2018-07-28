@@ -1,0 +1,24 @@
+.filters {
+    height: 300px;
+    display: flex;
+    box-sizing: border-box;
+}
+
+app-filter {
+    margin: 5px;
+}
+
+.button-div {
+    display: flex;
+    flex-direction: column;
+    width: 250px;
+}
+
+button {
+    height: 40px;
+}
+
+.recent-filters {
+    display: flex;
+    flex-direction: column;
+}

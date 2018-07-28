@@ -1,26 +1,30 @@
-<div class="outer-container" [hidden]="!(focusedEvent$ | async)">
+<div class="outer-container">
   <div #detailDiv class="event-detail" [scrollTop]="scrollTop" (wheel)="onWheel($event, detailDiv)">
-    <div class="event-properties" *ngIf="focusedEvent$ | async as focusedEvent">
-      <div>Source</div>
-      <div>{{focusedEvent.ProviderName}}</div>
-      <div>Logged</div>
-      <div>{{focusedEvent.TimeCreated | date:'medium'}}</div>
-      <div>Event ID</div>
-      <div>{{focusedEvent.Id}}</div>
-      <div>Task Category</div>
-      <div>{{focusedEvent.TaskName}}</div>
-      <div>Level</div>
-      <div>{{focusedEvent.LevelName}}</div>
-      <div>Keywords</div>
-      <div>{{focusedEvent.Keywords}}</div>
-      <div>User</div>
-      <div>{{focusedEvent.User}}</div>
-      <div>Computer</div>
-      <div>{{focusedEvent.MachineName}}</div>
-      <div>OpCode</div>
-      <div>{{focusedEvent.OpcodeName}}</div>
+    <div class="top-section" *ngIf="focusedEvent$ | async as focusedEvent">
+      <div class="event-properties">
+        <div>Source</div>
+        <div>{{focusedEvent.ProviderName}}</div>
+        <div>Logged</div>
+        <div>{{focusedEvent.TimeCreated | date:'medium'}}</div>
+        <div>Event ID</div>
+        <div>{{focusedEvent.Id}}</div>
+        <div>Task Category</div>
+        <div>{{focusedEvent.TaskName}}</div>
+        <div>Level</div>
+        <div>{{focusedEvent.LevelName}}</div>
+        <div>Keywords</div>
+        <div>{{focusedEvent.Keywords}}</div>
+        <div>User</div>
+        <div>{{focusedEvent.User}}</div>
+        <div>Computer</div>
+        <div>{{focusedEvent.MachineName}}</div>
+        <div>OpCode</div>
+        <div>{{focusedEvent.OpcodeName}}</div>
+      </div>
+      <button class="copy-button" type="button" (click)="copyEventToClipboard(focusedEvent)">Copy</button>
     </div>
-    <div *ngIf="focusedEvent$ | async as focusedEvent" class="event-description" [innerHtml]="getDescriptionHtml(focusedEvent)"></div>
+    <div class="event-description" [innerHtml]="description$ | async"></div>
   </div>
-  <app-scrollbar [rowcount]="detailDiv.scrollHeight" [position]="detailDiv.scrollTop" [rowsVisible]="detailDiv.clientHeight" (updatePosition)="onScrollBar($event)"></app-scrollbar>
+  <app-scrollbar [rowcount]="detailDiv.scrollHeight" [position]="detailDiv.scrollTop" [rowsVisible]="detailDiv.clientHeight"
+    (updatePosition)="onScrollBar($event)"></app-scrollbar>
 </div>

@@ -1,6 +1,6 @@
 import {
   Component, OnInit, Input, ChangeDetectionStrategy, ElementRef,
-  OnChanges, Output, EventEmitter, HostListener
+  OnChanges, Output, EventEmitter, HostListener, OnDestroy
 } from '@angular/core';
 
 @Component({
@@ -9,7 +9,7 @@ import {
   styleUrls: ['./scrollbar.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ScrollbarComponent implements OnInit, OnChanges {
+export class ScrollbarComponent implements OnInit, OnChanges, OnDestroy {
 
   @Input() rowcount: number;
   @Input() position: number;
@@ -34,12 +34,17 @@ export class ScrollbarComponent implements OnInit, OnChanges {
     if (this.rowsVisible > 1) {
       const percentVisible = this.rowsVisible / this.rowcount;
       this.cursorSize = height * percentVisible;
+      if (this.cursorSize < 20) { this.cursorSize = 20; }
     } else {
       height = height - this.cursorSize;
     }
 
     const rowsPerPixel = this.rowcount / height;
     this.padding = Math.floor(this.position / rowsPerPixel);
+  }
+
+  ngOnDestroy() {
+    this.updatePosition.complete();
   }
 
   onMouseDown(evt: any) {
