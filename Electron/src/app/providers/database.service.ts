@@ -209,7 +209,7 @@ export class DatabaseService {
               }
             } else {
               // If logName was not provided, then discard anything that has one
-              const noLogName = results.filter(r => r.LogLink === null);
+              const noLogName = results.filter(r => !r.LogLink);
               resolve(noLogName);
             }
           }

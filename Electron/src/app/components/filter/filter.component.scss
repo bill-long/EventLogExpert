@@ -1,0 +1,38 @@
+.filter {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background-color: #222222;
+}
+
+.filter-title {
+    font-weight: bold;
+    background-color: #111111;
+    padding: 5px;
+    text-align: center;
+}
+
+.filter-content {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+}
+
+.filter-items {
+    overflow: hidden;
+    margin: 10px;
+}
+
+.filter-item {
+    display: flex;
+}
+
+button {
+    width: 100%;
+    min-width: 100px;
+    margin: 0;
+}
+
+input {
+    margin-left: 0px;
+}

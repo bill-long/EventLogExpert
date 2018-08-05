@@ -1,0 +1,22 @@
+<div class="filter" [formGroup]="form">
+  <div class="filter-title">{{title}}</div>
+  <div class="filter-content">
+    <div #filterItemsDiv class="filter-items" [scrollTop]="scrollTop" (wheel)="onWheel($event, filterItemsDiv)">
+      <button *ngIf="anyNotSelected" (click)="setAllFormValues(true)">Select All</button>
+      <button *ngIf="!anyNotSelected" (click)="setAllFormValues(false)">Deselect All</button>
+      <div class="filter-item" *ngFor="let item of getControlNames()">
+        <input
+          type="checkbox"
+          name="{{item}}"
+          [formControlName]="item">
+          <label for="{{item}}">{{item}}</label>
+      </div>
+    </div>
+    <app-scrollbar
+      [rowcount]="filterItemsDiv.scrollHeight"
+      [position]="filterItemsDiv.scrollTop"
+      [rowsVisible]="filterItemsDiv.clientHeight"
+      (updatePosition)="setScrollValue($event)">
+    </app-scrollbar>
+  </div>
+</div>

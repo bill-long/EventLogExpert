@@ -1,6 +1,6 @@
 import { EventUtils } from './eventutils.service';
 import { Subject, Observable, from, Observer } from 'rxjs';
-import { scan, share, filter } from 'rxjs/operators';
+import { scan, filter, shareReplay } from 'rxjs/operators';
 import { Injectable, NgZone } from '@angular/core';
 import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
@@ -18,11 +18,25 @@ export class EventLogService {
     constructor(private eventUtils: EventUtils, private ngZone: NgZone,
         private electronSvc: ElectronService, private dbService: DatabaseService) {
 
-        console.log('DbService', dbService);
+        if (!AppConfig.production) {
+            console.log(dbService);
+            console.log(this);
+        }
+
         this.messageCache = {};
-        const initState: State = { loading: false, name: null, records: [] };
+        const initState: State = {
+            loading: false,
+            name: null,
+            records: [],
+            recordsFiltered: [],
+            focusedEvent: null,
+            selectedEvents: [],
+            filter: null,
+            sort: { property: 'RecordId', ascending: false },
+            uniqueRecordValues: { id: new Set<number>(), providerName: new Set<string>(), taskName: new Set<string>(['None']) }
+        };
         this.actions$ = new Subject();
-        this.state$ = this.actions$.pipe(scan(reducer, initState), share());
+        this.state$ = this.actions$.pipe(scan(reducer, initState), shareReplay());
 
         /*if (!AppConfig.production) {
             this.state$.subscribe(s => console.log(s));
@@ -36,7 +50,7 @@ export class EventLogService {
 
         electronSvc.ipcRenderer.on('openLogFromFile',
             (ev, file) => {
-                this.actions$.next(new LoadLogFromFile(file));
+                this.actions$.next(new LoadLogFromFileAction(file));
             });
 
         // Side effects of certain actions
@@ -44,7 +58,7 @@ export class EventLogService {
             this.loadActiveLog(a.logName, a.serverName);
         });
 
-        this.actions$.pipe(filter(a => a instanceof LoadLogFromFile)).subscribe((a: LoadLogFromFile) => {
+        this.actions$.pipe(filter(a => a instanceof LoadLogFromFileAction)).subscribe((a: LoadLogFromFileAction) => {
             this.loadLogFromFile(a.file);
         });
     }
@@ -87,20 +101,11 @@ export class EventLogService {
                     });
                 };
 
-                const providerNames = {};
-                const taskNames = { None: true };
-                const ids = {};
-
                 // Loop until there are no more results
                 let records: EventRecord[] = await resultReader();
                 while (records !== null) {
                     for (let i = 0; i < records.length; i++) {
                         const r = records[i];
-
-                        // Add the id to unique ids
-                        if (!ids[r.Id]) {
-                            ids[r.Id] = true;
-                        }
 
                         // Set the level string
                         switch (r.Level) {
@@ -118,11 +123,6 @@ export class EventLogService {
                                 break;
                         }
 
-                        // Add provider to unique provider names
-                        if (!providerNames[r.ProviderName]) {
-                            providerNames[r.ProviderName] = true;
-                        }
-
                         // Set the description string
                         const m = await this.getMessage(r.ProviderName, r.Id, r.LogName);
                         r.Description = this.formatDescription(r, m);
@@ -130,10 +130,6 @@ export class EventLogService {
                         // Set the task string
                         if (r.Task) {
                             r.TaskName = await this.getMessage(r.ProviderName, r.Task, null);
-                            // Add the task name to unique names
-                            if (!taskNames[r.TaskName]) {
-                                taskNames[r.TaskName] = true;
-                            }
                         } else {
                             r.TaskName = 'None';
                         }
@@ -211,7 +207,38 @@ export class EventLogService {
 export interface State {
     loading: boolean;
     name: string;
-    records: any[];
+    records: EventRecord[];
+    recordsFiltered: EventRecord[];
+    focusedEvent: EventRecord;
+    selectedEvents: EventRecord[];
+    filter: EventFilter;
+    sort: EventSort;
+    uniqueRecordValues: UniqueRecordValues;
+}
+
+// Filter for filtering events
+
+export interface EventFilter {
+    ids: Set<number>;
+    sources: Set<string>;
+    tasks: Set<string>;
+    levels: Set<string>;
+    description: string;
+}
+
+// Sort for sorting events
+
+export interface EventSort {
+    property: string;
+    ascending: boolean;
+}
+
+// For filter UI efficiency
+
+export interface UniqueRecordValues {
+    id: Set<number>;
+    providerName: Set<string>;
+    taskName: Set<string>;
 }
 
 // Actions
@@ -219,7 +246,13 @@ export interface State {
 export class EventsLoadedAction {
     type = 'EVENTS_LOADED';
 
-    constructor(public records: any[]) { }
+    constructor(public records: EventRecord[]) { }
+}
+
+export class FilterEventsAction {
+    type = 'FILTER_EVENTS';
+
+    constructor(public f: EventFilter) { }
 }
 
 export class FinishedLoadingAction {
@@ -234,17 +267,39 @@ export class LoadActiveLogAction {
     constructor(public logName: string, public serverName: string) { }
 }
 
-export class LoadLogFromFile {
+export class LoadLogFromFileAction {
     type = 'LOAD_LOG_FROM_FILE';
 
     constructor(public file: string) { }
 }
 
+export class FocusEventAction {
+    type = 'FOCUS_EVENT';
+
+    constructor(public e: EventRecord) { }
+}
+
+export class SelectEventAction {
+    type = 'SELECT_EVENT';
+
+    constructor(public e: EventRecord) { }
+}
+
+export class ShiftSelectEventAction {
+    type = 'SHIFT_SELECT_EVENT';
+
+    constructor(public e: EventRecord) { }
+}
+
 export type Action =
     EventsLoadedAction |
+    FilterEventsAction |
     FinishedLoadingAction |
+    FocusEventAction |
     LoadActiveLogAction |
-    LoadLogFromFile;
+    LoadLogFromFileAction |
+    SelectEventAction |
+    ShiftSelectEventAction;
 
 // Reducer
 
@@ -255,17 +310,60 @@ const reducer = (state: State, action: Action): State => {
     switch (action.type) {
         case 'EVENTS_LOADED': {
             const thisAction = action as EventsLoadedAction;
+            const records = [...state.records, ...thisAction.records];
             return {
                 loading: true,
                 name: state.name,
-                records: [...state.records, ...thisAction.records]
+                records: records,
+                recordsFiltered: records,
+                focusedEvent: state.focusedEvent,
+                selectedEvents: state.selectedEvents,
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
+            };
+        }
+        case 'FILTER_EVENTS': {
+            const thisAction = action as FilterEventsAction;
+            return {
+                loading: state.loading,
+                name: state.name,
+                records: state.records,
+                recordsFiltered: filterEvents(state.records, thisAction.f),
+                focusedEvent: state.focusedEvent,
+                selectedEvents: state.selectedEvents,
+                filter: thisAction.f,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
             };
         }
         case 'FINISHED_LOADING': {
+            const ids = new Set<number>(state.uniqueRecordValues.id);
+            const providers = new Set<string>(state.uniqueRecordValues.providerName);
+            const tasks = new Set<string>(state.uniqueRecordValues.taskName);
+            for (let i = 0; i < state.records.length; i++) {
+                const r = state.records[i];
+                ids.add(r.Id);
+                providers.add(r.ProviderName);
+                tasks.add(r.TaskName);
+            }
+
+            const records = state.records.reverse();
+
             return {
                 loading: false,
                 name: state.name,
-                records: state.records.reverse()
+                records: records,
+                recordsFiltered: filterEvents(records, state.filter),
+                focusedEvent: state.focusedEvent,
+                selectedEvents: state.selectedEvents,
+                filter: state.filter,
+                sort: { property: 'RecordId', ascending: false },    // this is the only supported sort for now
+                uniqueRecordValues: {
+                    id: new Set(Array.from(ids).sort((a, b) => a - b)),
+                    providerName: new Set(Array.from(providers).sort()),
+                    taskName: new Set(Array.from(tasks).sort())
+                }
             };
         }
         case 'LOAD_ACTIVE_LOG': {
@@ -273,19 +371,109 @@ const reducer = (state: State, action: Action): State => {
             return {
                 loading: true,
                 name: thisAction.logName,
-                records: []
+                records: [],
+                recordsFiltered: [],
+                focusedEvent: state.focusedEvent,
+                selectedEvents: state.selectedEvents,
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
             };
         }
         case 'LOAD_LOG_FROM_FILE': {
-            const thisAction = action as LoadLogFromFile;
+            const thisAction = action as LoadLogFromFileAction;
             return {
                 loading: true,
                 name: thisAction.file,
-                records: []
+                records: [],
+                recordsFiltered: [],
+                focusedEvent: state.focusedEvent,
+                selectedEvents: state.selectedEvents,
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
+            };
+        }
+        case 'FOCUS_EVENT': {
+            const thisAction = action as FocusEventAction;
+            return {
+                loading: state.loading,
+                name: state.name,
+                records: state.records,
+                recordsFiltered: state.recordsFiltered,
+                focusedEvent: thisAction.e,
+                selectedEvents: [thisAction.e],
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
+            };
+        }
+        case 'SELECT_EVENT': {
+            const thisAction = action as SelectEventAction;
+            const newSelectedEvents =
+                state.selectedEvents.indexOf(thisAction.e) > -1 ?
+                state.selectedEvents.filter(r => r !== thisAction.e) :
+                [...state.selectedEvents, thisAction.e];
+            return {
+                loading: state.loading,
+                name: state.name,
+                records: state.records,
+                recordsFiltered: state.recordsFiltered,
+                focusedEvent: state.focusedEvent,
+                selectedEvents: newSelectedEvents,
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
+            };
+        }
+        case 'SHIFT_SELECT_EVENT': {
+            const thisAction = action as ShiftSelectEventAction;
+            if (!state.focusedEvent) { return state; }
+            const start = state.recordsFiltered.indexOf(state.focusedEvent);
+            const end = state.recordsFiltered.indexOf(thisAction.e);
+            if (start === end) { return state; }
+            const newSelectedEvents = [state.focusedEvent];
+            if (start > end) {
+                for (let i = start - 1; i >= end; i--) {
+                    newSelectedEvents.push(state.recordsFiltered[i]);
+                }
+            } else {
+                for (let i = start + 1; i <= end; i++) {
+                    newSelectedEvents.push(state.recordsFiltered[i]);
+                }
+            }
+
+            return {
+                loading: state.loading,
+                name: state.name,
+                records: state.records,
+                recordsFiltered: state.recordsFiltered,
+                focusedEvent: state.focusedEvent,
+                selectedEvents: newSelectedEvents,
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
             };
         }
         default: {
             return state;
         }
     }
+};
+
+const filterEvents = (r: EventRecord[], f: EventFilter) => {
+    if (!f) { return r; }
+    return r.filter(record => {
+        if (f.ids && !f.ids.has(record.Id)) { return false; }
+        if (f.sources && !f.sources.has(record.ProviderName)) { return false; }
+        if (f.tasks && !f.tasks.has(record.TaskName)) { return false; }
+        if (f.levels && !f.levels.has(record.LevelName)) { return false; }
+        if (f.description) {
+            if (record.Description.indexOf(f.description) < 0) {
+                return false;
+            }
+        }
+
+        return true;
+    });
 };

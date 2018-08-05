@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import '../polyfills';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 
@@ -25,6 +25,9 @@ import { DatabaseService } from './providers/database.service';
 import { ScrollbarComponent } from './components/scrollbar/scrollbar.component';
 import { IngestComponent } from './components/ingest/ingest.component';
 import { EventDetailComponent } from './components/event-detail/event-detail.component';
+import { EventTableComponent } from './components/event-table/event-table.component';
+import { FilterPaneComponent } from './components/filterpane/filterpane.component';
+import { FilterComponent } from './components/filter/filter.component';
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -38,7 +41,10 @@ export function HttpLoaderFactory(http: HttpClient) {
     WebviewDirective,
     ScrollbarComponent,
     IngestComponent,
-    EventDetailComponent
+    EventDetailComponent,
+    EventTableComponent,
+    FilterPaneComponent,
+    FilterComponent
   ],
   imports: [
     BrowserModule,
@@ -51,7 +57,8 @@ export function HttpLoaderFactory(http: HttpClient) {
         useFactory: (HttpLoaderFactory),
         deps: [HttpClient]
       }
-    })
+    }),
+    ReactiveFormsModule
   ],
   providers: [ElectronService, EventLogService, EventUtils, DatabaseService],
   bootstrap: [AppComponent]

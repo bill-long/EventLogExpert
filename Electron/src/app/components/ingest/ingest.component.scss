@@ -20,30 +20,6 @@ input {
     margin-top: 5px;
 }
 
-button {
-    height: 43px;
-    background: rgb(60, 100, 231);
-    color: white;
-    border: none;
-    min-width: 130px;
-}
-
-button:disabled {
-    background: grey;
-}
-
-button:active {
-    background: #9CDCFE;
-}
-
-button:hover {
-    background: #9CDCFE;
-}
-
-button:focus {
-    outline: none;
-}
-
 .filler {
     flex: 1 1 auto;
 }
