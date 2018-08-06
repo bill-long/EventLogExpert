@@ -64,6 +64,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
     const filterString = this.stringifyFilter(filter);
     if (this.recentFilters.indexOf(filterString) < 0) {
       this.recentFilters.unshift(filterString);
+      this.recentFilters = this.recentFilters.slice(0, 5);
       localStorage.setItem('savedFilters', JSON.stringify(this.recentFilters));
     }
 
