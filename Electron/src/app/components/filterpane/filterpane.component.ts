@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { EventLogService, FilterEventsAction, EventFilter } from '../../providers/eventlog.service';
-import { takeUntil, distinctUntilKeyChanged, distinctUntilChanged } from 'rxjs/operators';
+import { takeUntil, distinctUntilChanged } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { FormGroup, AbstractControl, FormControl } from '@angular/forms';
 
@@ -18,18 +18,50 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   sources: FormGroup;
   tasks: FormGroup;
   levels: FormGroup;
-  recentFilters: string[];
+  recentFilters: { filter: string, readableFilter: string }[];
 
   constructor(private eventLogService: EventLogService) {
     const savedFiltersString = localStorage.getItem('savedFilters');
     if (savedFiltersString) {
       this.recentFilters = JSON.parse(savedFiltersString);
+      this.recentFilters.unshift(null);
     } else {
       this.recentFilters = [];
     }
   }
 
   applyFilter(filter: EventFilter) {
+
+    // If we're clearing the filter, then handle it and return
+    if (filter === null) {
+      if (this.recentFilters.length > 0 && this.recentFilters[0] !== null) {
+        this.recentFilters.unshift(null);
+      }
+      this.eventLogService
+        .actions$
+        .next(new FilterEventsAction({ description: null, ids: null, levels: null, sources: null, tasks: null }));
+      return;
+    }
+
+    // Otherwise, we're setting a filter
+    // Remove the null current filter if it exists, since we're about to set one
+    if (this.recentFilters[0] === null) {
+      this.recentFilters.shift();
+    }
+
+    const readableFilter = this.stringifyFilter(filter, true);
+    const unreadableFilter = this.stringifyFilter(filter, false);
+    const filterIndex = this.recentFilters.findIndex(f => f && f.readableFilter === readableFilter);
+    if (filterIndex < 0) {
+      this.recentFilters.unshift({ filter: unreadableFilter, readableFilter: readableFilter });
+      this.recentFilters = this.recentFilters.slice(0, 5);
+    } else {
+      this.recentFilters.splice(filterIndex, 1);
+      this.recentFilters.unshift({ filter: unreadableFilter, readableFilter: readableFilter });
+    }
+
+    localStorage.setItem('savedFilters', JSON.stringify(this.recentFilters));
+
     this.eventLogService.actions$.next(new FilterEventsAction(filter));
   }
 
@@ -60,12 +92,6 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       levels: levelFilter,
       description: null
     };
-
-    const filterString = this.stringifyFilter(filter);
-    if (this.recentFilters.indexOf(filterString) < 0) {
-      this.recentFilters.unshift(filterString);
-      localStorage.setItem('savedFilters', JSON.stringify(this.recentFilters));
-    }
 
     this.applyFilter(filter);
   }
@@ -118,10 +144,15 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   }
 
   resetFilter() {
-    this.applyFilter({ description: null, ids: null, levels: null, sources: null, tasks: null});
+    this.applyFilter(null);
   }
 
-  stringifyFilter(filter: EventFilter): string {
+  /**
+   * Because an EventFilter contains Sets, we cannot just use JSON.stringify.
+   * @param filter The EventFilter to stringify
+   * @param indentation Whether to use indentation to make it readable
+   */
+  stringifyFilter(filter: EventFilter, indentation: boolean): string {
     const slimFilter = {};
     if (filter.description) {
       slimFilter['description'] = filter.description;
@@ -139,7 +170,11 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       slimFilter['tasks'] = Array.from(filter.tasks);
     }
 
-    return JSON.stringify(slimFilter);
+    if (indentation) {
+      return JSON.stringify(slimFilter, null, 4);
+    } else {
+      return JSON.stringify(slimFilter);
+    }
   }
 
   unstringifyFilter(s: string): EventFilter {
@@ -152,4 +187,5 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       tasks: strObj['tasks'] ? new Set(strObj['tasks']) : null
     };
   }
+
 }

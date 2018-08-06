@@ -28,6 +28,7 @@ import { EventDetailComponent } from './components/event-detail/event-detail.com
 import { EventTableComponent } from './components/event-table/event-table.component';
 import { FilterPaneComponent } from './components/filterpane/filterpane.component';
 import { FilterComponent } from './components/filter/filter.component';
+import { TagsmodalComponent } from './components/tagsmodal/tagsmodal.component';
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -44,7 +45,8 @@ export function HttpLoaderFactory(http: HttpClient) {
     EventDetailComponent,
     EventTableComponent,
     FilterPaneComponent,
-    FilterComponent
+    FilterComponent,
+    TagsmodalComponent
   ],
   imports: [
     BrowserModule,

@@ -18,9 +18,9 @@ export class EventLogExpertMenu {
     // Add the menus
     menuBar.append(this.getFileMenu());
     menuBar.append(this.getEditMenu());
-    if (isDev) {
+    // if (isDev) {
       menuBar.append(this.getViewMenu());
-    }
+    // }
 
     // And finally set it on the app
     Menu.setApplicationMenu(menuBar);
@@ -44,17 +44,8 @@ export class EventLogExpertMenu {
   private getFileMenu() {
 
     const fileMenu = new Menu();
-
-    // Open Event Log submenu
-    const openEventLogMenu = new Menu();
-    openEventLogMenu.append(new MenuItem({ label: 'Application', click: (m, w, e) => this.openActiveLog(m, w, e) }));
-    openEventLogMenu.append(new MenuItem({ label: 'System', click: (m, w, e) => this.openActiveLog(m, w, e) }));
-    openEventLogMenu.append(new MenuItem({ label: 'From File', click: (m, w, e) => this.openLogFromFile(m, w, e) }));
-    const openEventLog = new MenuItem({ label: 'Open Event Log', submenu: openEventLogMenu });
-    fileMenu.append(openEventLog);
-
-    fileMenu.append(new MenuItem({ label: 'Ingest Providers', click: (m, w, e) => this.ingestProviders(m, w, e) }));
-
+    fileMenu.append(new MenuItem({ label: 'Open Event Log File', click: (m, w, e) => this.openLogFromFile(m, w, e) }));
+    fileMenu.append(new MenuItem({ label: 'Manage Providers', click: (m, w, e) => this.ingestProviders(m, w, e) }));
     const file = new MenuItem({ label: '&File', submenu: fileMenu });
     return file;
   }
@@ -78,7 +69,7 @@ export class EventLogExpertMenu {
   }
 
   private ingestProviders(menuItem, window: BrowserWindow, ev: Event) {
-    const ingestWindow = new BrowserWindow({ parent: window, modal: true, show: false, width: 610, height: 150, autoHideMenuBar: true });
+    const ingestWindow = new BrowserWindow({ modal: false, show: false, width: 1024, height: 768, autoHideMenuBar: true });
     // ingestWindow.setMenu(null);
     if (this.windowManager.isServing()) {
       require('electron-reload')(__dirname, {
@@ -94,24 +85,6 @@ export class EventLogExpertMenu {
       }));
     }
     ingestWindow.once('ready-to-show', () => ingestWindow.show());
-  }
-
-  private openActiveLog(menuItem: MenuItem, window: BrowserWindow, ev: Event) {
-
-    if (!this.windowManager.hasOpenLog(window)) {
-      this.windowManager.setOpenLog(window, menuItem.label);
-      window.setTitle(`EventLogExpert ${menuItem.label}`);
-      window.webContents.send('openActiveLog', menuItem.label, null);
-    } else {
-      const newWindow = this.windowManager.createWindow();
-      newWindow.setTitle(`EventLogExpert ${menuItem.label}`);
-      newWindow.on('page-title-updated', (event, title) => event.preventDefault());
-      newWindow.webContents.once('dom-ready', () => {
-        newWindow.webContents.send('openActiveLog', menuItem.label, null);
-        this.windowManager.setOpenLog(newWindow, menuItem.label);
-      });
-    }
-
   }
 
   private openLogFromFile(menuItem: MenuItem, window: BrowserWindow, ev: Event) {

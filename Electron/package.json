@@ -1,6 +1,6 @@
 {
   "name": "eventlogexpert",
-  "version": "0.1.0",
+  "version": "0.8.0",
   "author": {
     "name": "Microsoft"
   },
@@ -10,10 +10,10 @@
     "postinstall": "npx electron-builder install-app-deps",
     "ng": "ng",
     "start": "npm run builddll && npm-run-all -p ng:serve electron:serve",
-    "build": "npm run electron:tsc && ng build",
+    "build": "npm run builddll && npm run electron:tsc && ng build",
     "build:dev": "npm run build -- -c dev",
     "build:prod": "npm run build -- -c production",
-    "builddll": "dotnet build ../EventUtils/EventUtils -o ../../Electron -f net471",
+    "builddll": "dotnet build ../EventUtils/EventUtils -o ../../Electron -f net471 -c Release",
     "ng:serve": "ng serve -o",
     "electron:tsc": "tsc main.ts",
     "electron:serve": "wait-on http-get://localhost:4200/ && npm run electron:tsc && electron . --serve",
