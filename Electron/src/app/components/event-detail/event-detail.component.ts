@@ -31,7 +31,7 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
   ) {
     this.lastWheelMove = null;
     this.scrollTop = 0;
-    this.focusedEvent$ = eventLogService.state$.pipe(map(s => s.focusedEvent), takeUntil(this.ngUnsubscribe));
+    this.focusedEvent$ = eventLogService.state$.pipe(map(s => s.focusedEvent), distinctUntilChanged(), takeUntil(this.ngUnsubscribe));
     this.description$ = this.focusedEvent$.pipe(map(e => this.getDescriptionHtml(e)));
   }
 
@@ -42,12 +42,12 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
   }
 
   getDescriptionHtml(r: EventRecord) {
-    const html = (r ? r.Description.replace(/%n/g, '<br>') : '');
+    const html = (r ? r.Description.replace(/(%n|\n)/g, '<br>') : '');
     return this.ds.bypassSecurityTrustHtml(html);
   }
 
   getDescriptionText(r: EventRecord) {
-    return `LogName:       ${r.LogName}` +
+    return `LogName:       ${r.LogName}\r\n` +
       `Source:        ${r.ProviderName}\r\n` +
       `Date:          ${(new Date(r.TimeCreated)).toLocaleString()}\r\n` +
       `Event ID:      ${r.Id}\r\n` +
