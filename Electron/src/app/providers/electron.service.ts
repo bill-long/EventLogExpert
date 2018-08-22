@@ -5,7 +5,10 @@ import { Injectable } from '@angular/core';
 import { ipcRenderer, webFrame, remote, clipboard } from 'electron';
 import * as childProcess from 'child_process';
 import * as fs from 'fs';
+import * as readline from 'readline';
 import * as edge from 'electron-edge-js';
+
+const electron = window.require('electron');
 
 @Injectable()
 export class ElectronService {
@@ -17,6 +20,8 @@ export class ElectronService {
   fs: typeof fs;
   edge: typeof edge;
   clipboard: typeof clipboard;
+  extraResourcesPath: string;
+  readline: typeof readline;
 
   constructor() {
     // Conditional imports
@@ -24,11 +29,13 @@ export class ElectronService {
       this.ipcRenderer = window.require('electron').ipcRenderer;
       this.webFrame = window.require('electron').webFrame;
       this.remote = window.require('electron').remote;
+      this.extraResourcesPath = this.remote.app.getAppPath().endsWith('.asar') ? 'resources/' : '';
       this.clipboard = window.require('electron').clipboard;
 
       this.childProcess = window.require('child_process');
       this.fs = window.require('fs');
       this.edge = window.require('electron-edge-js');
+      this.readline = window.require('readline');
     }
   }
 

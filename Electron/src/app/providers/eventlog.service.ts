@@ -1,6 +1,6 @@
 import { EventUtils } from './eventutils.service';
 import { Subject, Observable, from, Observer } from 'rxjs';
-import { scan, filter, shareReplay } from 'rxjs/operators';
+import { scan, filter, shareReplay, take, map, withLatestFrom } from 'rxjs/operators';
 import { Injectable, NgZone } from '@angular/core';
 import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
@@ -12,7 +12,7 @@ export class EventLogService {
 
     actions$: Subject<Action>;
     state$: Observable<State>;
-    messageCache: {};
+    messageCache: { [key: string]: { [key: string]: { [key: string]: string } } };
     formatRegexp = new RegExp(/%([0-9]+)/g);
 
     constructor(private eventUtils: EventUtils, private ngZone: NgZone,
@@ -38,20 +38,12 @@ export class EventLogService {
         this.actions$ = new Subject();
         this.state$ = this.actions$.pipe(scan(reducer, initState), shareReplay());
 
-        /*if (!AppConfig.production) {
-            this.state$.subscribe(s => console.log(s));
-        }*/
-
+        /*
         // Listen for notifications from Main process
         electronSvc.ipcRenderer.on('openActiveLog',
             (ev, logName, serverName) => {
                 this.actions$.next(new LoadActiveLogAction(logName, serverName));
-            });
-
-        electronSvc.ipcRenderer.on('openLogFromFile',
-            (ev, file) => {
-                this.actions$.next(new LoadLogFromFileAction(file));
-            });
+            }); */
 
         // Side effects of certain actions
         this.actions$.pipe(filter(a => a instanceof LoadActiveLogAction)).subscribe((a: LoadActiveLogAction) => {
@@ -60,6 +52,31 @@ export class EventLogService {
 
         this.actions$.pipe(filter(a => a instanceof LoadLogFromFileAction)).subscribe((a: LoadLogFromFileAction) => {
             this.loadLogFromFile(a.file);
+        });
+
+        this.dbService.tagsByPriority$.pipe(withLatestFrom(this.state$)).subscribe(([t, s]) => {
+            if (s.records.length > 0 && !s.loading) {
+                this.updateTextProperties(t);
+            }
+        });
+
+        this.actions$.pipe(
+            filter(a => a instanceof FinishedLoadingAction),
+            withLatestFrom(this.dbService.tagsByPriority$)
+        ).subscribe(([finishedLoadingAction, tagsByPriority]: [FinishedLoadingAction, string[]]) => {
+            if (finishedLoadingAction.tagsByPriority.length === tagsByPriority.length) {
+                let match = true;
+                for (let i = 0; i < finishedLoadingAction.tagsByPriority.length; i++) {
+                    if (finishedLoadingAction.tagsByPriority[i] !== tagsByPriority[i]) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) { return; }
+            }
+
+            this.updateTextProperties(tagsByPriority);
         });
     }
 
@@ -80,87 +97,115 @@ export class EventLogService {
      * and updates progress while doing so.
      */
     private loadEventsFromReaderDelegate(delegate: any) {
+        this.dbService.tagsByPriority$.pipe(take(1)).subscribe(tagsByPriority => {
+            const reader = delegate;
 
-        const reader = delegate;
+            // Create an observable that will emit the events
+            const resultObserver: Observable<any[]> =
+                Observable.create(async (o: Observer<any[]>) => {
 
-        // Create an observable that will emit the events
-        const resultObserver: Observable<any[]> =
-            Observable.create(async (o: Observer<any[]>) => {
+                    // Wrap the reader delegate in a Promise
+                    const resultReader = () => {
+                        return new Promise<any[]>(resolve => {
+                            reader(null, (readerError, events) => {
+                                if (readerError) {
+                                    console.log(readerError);
+                                    resolve(null);
+                                } else {
+                                    resolve(events);
+                                }
+                            });
+                        });
+                    };
 
-                // Wrap the reader delegate in a Promise
-                const resultReader = () => {
-                    return new Promise<any[]>(resolve => {
-                        reader(null, (readerError, events) => {
-                            if (readerError) {
-                                console.log(readerError);
-                                resolve(null);
-                            } else {
-                                resolve(events);
+                    // Loop until there are no more results
+                    let records: EventRecord[] = await resultReader();
+                    while (records !== null) {
+
+                        // Populate the level name here, since it doesn't change when
+                        // tag priority changes
+                        records.forEach(r => {
+                            switch (r.Level) {
+                                case '0':
+                                    r.LevelName = 'Information';
+                                    break;
+                                case '2':
+                                    r.LevelName = 'Error';
+                                    break;
+                                case '3':
+                                    r.LevelName = 'Warning';
+                                    break;
+                                case '4':
+                                    r.LevelName = 'Information';
+                                    break;
                             }
                         });
-                    });
-                };
 
-                // Loop until there are no more results
-                let records: EventRecord[] = await resultReader();
-                while (records !== null) {
-                    for (let i = 0; i < records.length; i++) {
-                        const r = records[i];
+                        // Populate the stuff affected by tag order
+                        await this.populateTextProperties(records, tagsByPriority);
 
-                        // Set the level string
-                        switch (r.Level) {
-                            case '0':
-                                r.LevelName = 'Information';
-                                break;
-                            case '2':
-                                r.LevelName = 'Error';
-                                break;
-                            case '3':
-                                r.LevelName = 'Warning';
-                                break;
-                            case '4':
-                                r.LevelName = 'Information';
-                                break;
-                        }
+                        // Emit this set of results
+                        o.next(records);
 
-                        // Set the description string
-                        const m = await this.getMessage(r.ProviderName, r.Id, r.LogName);
-                        r.Description = this.formatDescription(r, m);
-
-                        // Set the task string
-                        if (r.Task) {
-                            r.TaskName = await this.getMessage(r.ProviderName, r.Task, null);
-                        } else {
-                            r.TaskName = 'None';
-                        }
-
-                        // Set the Opcode string
-                        if (r.Opcode) {
-                            r.OpcodeName = await this.getMessage(r.ProviderName, r.Opcode, null);
-                        } else {
-                            r.OpcodeName = '';
-                        }
+                        // Now grab the next batch
+                        records = await resultReader();
                     }
 
-                    // Emit this set of results
-                    o.next(records);
+                    // Complete
+                    o.complete();
+                });
 
-                    // Now grab the next batch
-                    records = await resultReader();
-                }
-
-                // Complete
-                o.complete();
-            });
-
-        resultObserver.subscribe(
-            r => this.ngZone.run(() => this.actions$.next(new EventsLoadedAction(r))),
-            err => console.log(err),
-            () => this.ngZone.run(() => this.actions$.next(new FinishedLoadingAction()))
-        );
+            resultObserver.subscribe(
+                r => this.ngZone.run(() => this.actions$.next(new EventsLoadedAction(r))),
+                err => console.log(err),
+                () => this.ngZone.run(() => this.actions$.next(new FinishedLoadingAction(true, tagsByPriority)))
+            );
+        });
     }
 
-    private async getMessage(providerName: string, messageNumber: number, logName: string) {
+    private updateTextProperties(tagsByPriority: string[]) {
+        this.state$.pipe(take(1)).subscribe(async s => {
+            if (s.records.length < 1) { return; }
+            this.actions$.next(new ClearEventsAction());
+            for (let i = 0; i < s.records.length; i += 1000) {
+                const batch = s.records.splice(i, 1000);
+                await this.populateTextProperties(batch, tagsByPriority);
+                this.actions$.next(new EventsLoadedAction(batch));
+            }
+
+            this.actions$.next(new FinishedLoadingAction(false, tagsByPriority));
+        });
+    }
+
+    private async populateTextProperties(records: EventRecord[], tagsByPriority: string[]) {
+        for (let i = 0; i < records.length; i++) {
+            const r = records[i];
+
+            if (r.RecordId === 286186) {
+                const foo = 'bar';
+            }
+
+            // Set the description string
+            const m = await this.getMessage(r.ProviderName, r.Id, r.LogName, tagsByPriority);
+            r.Description = this.formatDescription(r, m);
+
+            // Set the task string
+            if (r.Task) {
+                r.TaskName = await this.getMessage(r.ProviderName, r.Task, null, tagsByPriority);
+            } else {
+                r.TaskName = 'None';
+            }
+
+            // Set the Opcode string
+            if (r.Opcode) {
+                r.OpcodeName = await this.getMessage(r.ProviderName, r.Opcode, null, tagsByPriority);
+            } else {
+                r.OpcodeName = '';
+            }
+        }
+    }
+
+    private async getMessage(providerName: string, messageNumber: number, logName: string, tagsByPriority: string[]): Promise<string> {
         if (this.messageCache[providerName] === undefined) {
             this.messageCache[providerName] = {};
         }
@@ -175,6 +220,19 @@ export class EventLogService {
         } else {
             const m = await this.dbService.findMessages(providerName, messageNumber, logName);
             if (m && m.length > 0) {
+                if (m.length === 1) {
+                    this.messageCache[providerName][messageNumber][logName] = m[0].Text;
+                    return m[0].Text;
+                }
+                for (let i = 0; i < tagsByPriority.length; i++) {
+                    const messageByTag = m.find(message => message.Tag === tagsByPriority[i]);
+                    if (messageByTag) {
+                        this.messageCache[providerName][messageNumber][logName] = messageByTag.Text;
+                        return messageByTag.Text;
+                    }
+                }
+
+                // If we get here, we didn't find any matching tag somehow? Just pick one and hope for the best
                 this.messageCache[providerName][messageNumber][logName] = m[0].Text;
                 return m[0].Text;
             } else {
@@ -243,6 +301,12 @@ export interface UniqueRecordValues {
 
 // Actions
 
+export class ClearEventsAction {
+    type = 'CLEAR_EVENTS';
+
+    constructor() { }
+}
+
 export class EventsLoadedAction {
     type = 'EVENTS_LOADED';
 
@@ -258,7 +322,12 @@ export class FilterEventsAction {
 export class FinishedLoadingAction {
     type = 'FINISHED_LOADING';
 
-    constructor() { }
+    /**
+     * Constructor for FinishedLoadingAction.
+     * @param reverseSort Whether to reverse the order of records. Should be true when loading from evtx.
+     * @param tagsByPriority The tag order used during loading, so we can determine if it changed.
+     */
+    constructor(public reverseSort: boolean, public tagsByPriority: string[]) { }
 }
 
 export class LoadActiveLogAction {
@@ -292,6 +361,7 @@ export class ShiftSelectEventAction {
 }
 
 export type Action =
+    ClearEventsAction |
     EventsLoadedAction |
     FilterEventsAction |
     FinishedLoadingAction |
@@ -308,6 +378,19 @@ const reducer = (state: State, action: Action): State => {
         console.log(action);
     }
     switch (action.type) {
+        case 'CLEAR_EVENTS': {
+            return {
+                loading: false,
+                name: state.name,
+                records: [],
+                recordsFiltered: [],
+                focusedEvent: null,
+                selectedEvents: null,
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: { id: new Set<number>(), providerName: new Set<string>(), taskName: new Set<string>(['None']) }
+            };
+        }
         case 'EVENTS_LOADED': {
             const thisAction = action as EventsLoadedAction;
             const records = [...state.records, ...thisAction.records];
@@ -338,6 +421,7 @@ const reducer = (state: State, action: Action): State => {
             };
         }
         case 'FINISHED_LOADING': {
+            const thisAction = action as FinishedLoadingAction;
             const ids = new Set<number>(state.uniqueRecordValues.id);
             const providers = new Set<string>(state.uniqueRecordValues.providerName);
             const tasks = new Set<string>(state.uniqueRecordValues.taskName);
@@ -348,7 +432,10 @@ const reducer = (state: State, action: Action): State => {
                 tasks.add(r.TaskName);
             }
 
-            const records = state.records.reverse();
+            let records = state.records;
+            if (thisAction.reverseSort) {
+                records = records.reverse();
+            }
 
             return {
                 loading: false,
@@ -412,8 +499,8 @@ const reducer = (state: State, action: Action): State => {
             const thisAction = action as SelectEventAction;
             const newSelectedEvents =
                 state.selectedEvents.indexOf(thisAction.e) > -1 ?
-                state.selectedEvents.filter(r => r !== thisAction.e) :
-                [...state.selectedEvents, thisAction.e];
+                    state.selectedEvents.filter(r => r !== thisAction.e) :
+                    [...state.selectedEvents, thisAction.e];
             return {
                 loading: state.loading,
                 name: state.name,

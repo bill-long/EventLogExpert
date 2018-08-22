@@ -1,0 +1,36 @@
+.modal {
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 200px;
+}
+
+.hidden {
+    display: none;
+}
+
+.tag {
+    display: flex;
+    flex-direction: row;
+}
+
+.arrow {
+    width: 20px;
+    cursor: default;
+}
+
+button {
+    margin-top: 20px;
+    width: 100px;
+}

@@ -1,10 +1,11 @@
 {
-  "productName": "angular-electron",
+  "productName": "eventlogexpert",
   "directories": {
     "output": "app-builds"
   },
     "files": [
         "**/*",
+        "!*.psd",
         "!*.ts",
         "!*.code-workspace",
         "!LICENSE.md",
@@ -20,21 +21,12 @@
         "!tslint.json"
     ],
   "win": {
+    "extraResources": [
+      "./*.dll"
+    ],
     "icon": "dist",
     "target": [
-      "portable"
-    ]
-  },
-  "mac": {
-    "icon": "dist",
-    "target": [
-      "dmg"
-    ]
-  },
-  "linux": {
-    "icon": "dist",
-    "target": [
-      "AppImage"
+      "nsis"
     ]
   }
 }

@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
 import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
-import { from } from 'rxjs';
+import { from, Observable, Subject, Observer } from 'rxjs';
 import { Message } from './database.models';
+import { take, shareReplay } from 'rxjs/operators';
 
 const DATABASE_NAME = 'messagesDb';
 const MESSAGES_OBJECTSTORE_NAME = 'messages';
@@ -23,7 +24,7 @@ const TAG_INDEX = 'Tag';
  * messages - this stores the messages themselves, including things like
  *  event ID, provider name, and the user-supplied tag
  *
- * tags - we need to store tags separate for performance, since it is far
+ * tags - we need to store tags separately for performance, since it is far
  *  too slow to look up all the unique tags from the messages store, so
  *  we store those here.
  */
@@ -31,8 +32,11 @@ export class DatabaseService {
 
   db: IDBDatabase;
   tagsCache: string[];
+  tagsByPriority$: Observable<string[]>;
+  private tagsByPrioritySubject = new Subject<string[]>();
 
   constructor(private electronService: ElectronService) {
+    this.tagsByPriority$ = this.tagsByPrioritySubject.pipe(shareReplay(1));
     const openReq = indexedDB.open(DATABASE_NAME, 1);
     openReq.onerror = (ev) => {
       console.log(`Failed to open ${DATABASE_NAME}`, ev);
@@ -41,6 +45,14 @@ export class DatabaseService {
     openReq.onsuccess = async (ev: any) => {
       this.db = ev.target.result;
       this.tagsCache = await this.getAllTags();
+      const tagsByPriorityString = localStorage.getItem('tagsByPriority');
+      if (tagsByPriorityString) {
+        const storedTagPriority = JSON.parse(tagsByPriorityString);
+        const merged = this.mergeTagPriority(storedTagPriority, this.tagsCache);
+        this.tagsByPrioritySubject.next(merged);
+      } else {
+        this.tagsByPrioritySubject.next(this.tagsCache);
+      }
     };
 
     openReq.onupgradeneeded = (ev: any) => {
@@ -61,41 +73,72 @@ export class DatabaseService {
 
   /**
    * Add messages to the database.
-   * @param messages The messages to add. Note the tag must be the same on all of them.
+   * @param messages The messages to add.
    */
-  addMessages(messages: any[]) {
+  addMessages(messages: any[], reportProgress: (s: string) => any): Promise<number> {
     return new Promise<number>(async resolve => {
-      if (this.tagsCache.indexOf(messages[0].Tag) < 0) {
-        const addTagResult = await this.addTag({ name: messages[0].Tag });
-        if (addTagResult === null) {
-          console.log('Failed to add tag:', messages[0].Tag);
-          resolve(0);
+      const batchSize = 100000;
+      let total = 0;
+      for (let i = 0; i < messages.length; i += batchSize) {
+        const added = await this.addOneBatchOfMessages(messages.slice(i, i + batchSize));
+        total += added;
+        if (reportProgress) {
+          reportProgress(`${total} / ${messages.length}`);
         }
-
-        this.tagsCache.push(messages[0].Tag);
       }
 
+      const uniqueTags = Array.from(new Set(messages.map(m => m.Tag)));
+      for (let i = 0; i < uniqueTags.length; i++) {
+        const t = uniqueTags[i];
+        if (!this.tagsCache.includes(t)) {
+          this.tagsCache.push(t);
+          const addTagResult = await this.addTag({ name: t });
+        }
+      }
+
+      resolve(total);
+    });
+  }
+
+  addMessages$(messages: any[], reportProgress: (s: string) => any) {
+    return from(this.addMessages(messages, reportProgress));
+  }
+
+  addOneBatchOfMessages(messages: any[]): Promise<number> {
+    return new Promise<number>(async resolve => {
       let itemsAdded = 0;
       const transaction = this.db.transaction(MESSAGES_OBJECTSTORE_NAME, 'readwrite');
-      transaction.oncomplete = ev => resolve(itemsAdded);
-      transaction.onerror = ev => resolve(itemsAdded);
+      transaction.oncomplete = ev => {
+        resolve(itemsAdded);
+      };
+      transaction.onabort = err => {
+        throw new Error('addOneBatchOfMessages abort: ' + transaction.error.message);
+      };
       const messageStore = transaction.objectStore(MESSAGES_OBJECTSTORE_NAME);
       messages.forEach(m => {
-        messageStore.add(m);
+        const r = messageStore.add(m);
         itemsAdded++;
       });
     });
   }
 
-  addMessages$(messages: any[]) {
-    return from(this.addMessages(messages));
-  }
-
-  addTag(tag: { name: string }) {
+  addTag(tag: { name: string }): Promise<string> {
     return new Promise<string>(resolve => {
       const transaction = this.db.transaction(TAGS_OBJECTSTORE_NAME, 'readwrite');
-      transaction.oncomplete = ev => resolve(tag.name);
-      transaction.onerror = ev => resolve(null);
+      transaction.oncomplete = ev => {
+        this.tagsCache.push(tag.name);
+        this.tagsByPriority$.pipe(take(1)).subscribe(tags => {
+          const newPriority = this.mergeTagPriority([...tags, tag.name], this.tagsCache);
+          this.tagsByPrioritySubject.next(newPriority);
+        });
+        resolve(tag.name);
+      };
+      transaction.onerror = ev => {
+        throw new Error('addTag error: ' + transaction.error.message);
+      };
+      transaction.onabort = ev => {
+        throw new Error('addTag abort: ' + transaction.error.message);
+      };
       const tagStore = transaction.objectStore(TAGS_OBJECTSTORE_NAME);
       const req = tagStore.add(tag);
     });
@@ -116,11 +159,30 @@ export class DatabaseService {
     });
   }
 
-  getAllMessages$() {
-    return from(this.getAllMessages());
+  getAllMessages$(): Observable<any[]> {
+    return new Observable(o => {
+      const maxBuffer = 1000;
+      let buffer = [];
+      this.db.transaction(MESSAGES_OBJECTSTORE_NAME).objectStore(MESSAGES_OBJECTSTORE_NAME).openCursor().onsuccess = (ev: any) => {
+        const cursor = ev.target.result;
+        if (cursor) {
+          buffer.push(cursor.value);
+          if (buffer.length === maxBuffer) {
+            o.next(buffer);
+            buffer = [];
+          }
+          cursor.continue();
+        } else {
+          if (buffer.length > 0) {
+            o.next(buffer);
+          }
+          o.complete();
+        }
+      };
+    });
   }
 
-  getAllTags() {
+  getAllTags(): Promise<string[]> {
     return new Promise<string[]>(resolve => {
       const tags = [];
       this.db.transaction(TAGS_OBJECTSTORE_NAME)
@@ -158,12 +220,17 @@ export class DatabaseService {
    * @param providerName The name of the event provider
    * @param id The raw ID of event.
    */
-  findMessages(providerName: string, id: number, logName: string) {
+  findMessages(providerName: string, id: number, logName: string): Promise<Message[]> {
     return this.getMessages(providerName, id, logName, true);
   }
 
   findMessages$(providerName: string, id: number, logName: string) {
     return from(this.findMessages(providerName, id, logName));
+  }
+
+  setTagPriority(tagsByPriority: string[]) {
+    const newTagPriority = this.mergeTagPriority(tagsByPriority, this.tagsCache);
+    this.tagsByPrioritySubject.next(newTagPriority);
   }
 
   /**
@@ -215,5 +282,20 @@ export class DatabaseService {
           }
         };
     });
+  }
+
+  private mergeTagPriority(desiredPriority: string[], availableTags: string[]) {
+    if (!desiredPriority || desiredPriority.length < 1) {
+      return availableTags;
+    }
+
+    // we must not include tags that don't exist
+    let newPriority = desiredPriority.filter(t => availableTags.includes(t));
+
+    // we must include all available tags
+    const notIncluded = availableTags.filter(t => !desiredPriority.includes(t));
+    newPriority = [...newPriority, ...notIncluded];
+
+    return newPriority;
   }
 }

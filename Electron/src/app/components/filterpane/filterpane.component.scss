@@ -16,9 +16,11 @@ app-filter {
 
 button {
     height: 40px;
+    overflow: hidden;
 }
 
 .recent-filters {
     display: flex;
     flex-direction: column;
+    width: 250px;
 }
