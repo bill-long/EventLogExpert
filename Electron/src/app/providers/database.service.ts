@@ -231,6 +231,7 @@ export class DatabaseService {
   setTagPriority(tagsByPriority: string[]) {
     const newTagPriority = this.mergeTagPriority(tagsByPriority, this.tagsCache);
     this.tagsByPrioritySubject.next(newTagPriority);
+    localStorage.setItem('tagsByPriority', JSON.stringify(newTagPriority));
   }
 
   /**
