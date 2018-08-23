@@ -1,6 +1,6 @@
-import { Menu, MenuItem, BrowserWindow, dialog, OpenDialogOptions } from 'electron';
+import { Menu, MenuItem, BrowserWindow, dialog, OpenDialogOptions, app } from 'electron';
 import { EventLogExpertWindowManager } from './eventlogexpert.windowmanager';
-import isDev = require('electron-is-dev');
+import * as isDev from 'electron-is-dev';
 import * as url from 'url';
 import * as path from 'path';
 
@@ -101,7 +101,7 @@ export class EventLogExpertMenu {
 
     if (!this.windowManager.hasOpenLog(window)) {
       this.windowManager.setOpenLog(window, files[0]);
-      window.setTitle(`EventLogExpert ${files[0]}`);
+      window.setTitle(`EventLogExpert ${app.getVersion()} ${files[0]}`);
       window.on('page-title-updated', (event, title) => event.preventDefault());
       window.webContents.send('openLogFromFile', files[0], null);
     } else {
