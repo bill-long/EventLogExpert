@@ -1,6 +1,8 @@
 import { app } from 'electron';
+import { autoUpdater } from 'electron-updater';
 import { EventLogExpertMenu } from './eventlogexpert.menu';
 import { EventLogExpertWindowManager } from './eventlogexpert.windowmanager';
+import * as log from 'electron-log';
 
 let serve;
 const args = process.argv.slice(1);
@@ -25,7 +27,12 @@ try {
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
-  app.on('ready', () => { windowManager.createWindow(); });
+  app.on('ready', () => {
+    windowManager.createWindow();
+    autoUpdater.logger = log;
+    log.transports.file.level = 'debug';
+    autoUpdater.checkForUpdatesAndNotify();
+  });
 
   // Quit when all windows are closed.
   app.on('window-all-closed', () => {

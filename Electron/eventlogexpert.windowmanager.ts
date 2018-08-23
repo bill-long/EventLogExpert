@@ -1,5 +1,5 @@
-import { BrowserWindow, screen } from 'electron';
-import isDev = require('electron-is-dev');
+import { BrowserWindow, screen, app } from 'electron';
+import * as isDev from 'electron-is-dev';
 import * as url from 'url';
 import * as path from 'path';
 
@@ -22,6 +22,8 @@ export class EventLogExpertWindowManager {
             width: size.width,
             height: size.height
         });
+
+        win.setTitle(`EventLogExpert ${app.getVersion()}`);
 
         if (this.serve) {
             require('electron-reload')(__dirname, {
