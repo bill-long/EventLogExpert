@@ -59,8 +59,23 @@ namespace EventLogExpert
                             evt.Opcode,
                             User = evt.UserId?.Value,
                             evt.RecordId,
-                            Properties = evt.Properties.Select(p => p.Value)
+                            Properties = evt.Properties.Select(p =>
+                            {
+                                if (p.Value is byte[] a)
+                                {
+                                    return string.Join("", a.Select(element => element.ToString("X2")));
+                                }
+
+                                return p.Value.ToString();
+                            })
                         });
+                    }
+
+                    if (count < 1)
+                    {
+                        readComplete = true;
+                        reader.Dispose();
+                        return null;
                     }
 
                     if (count < BatchSize)
@@ -111,8 +126,23 @@ namespace EventLogExpert
                             evt.Opcode,
                             User = evt.UserId?.Value,
                             evt.RecordId,
-                            Properties = evt.Properties.Select(p => p.Value)
+                            Properties = evt.Properties.Select(p =>
+                            {
+                                if (p.Value is byte[] a)
+                                {
+                                    return string.Join("", a.Select(element => element.ToString("X2")));
+                                }
+
+                                return p.Value.ToString();
+                            })
                         });
+                    }
+
+                    if (count < 1)
+                    {
+                        readComplete = true;
+                        reader.Dispose();
+                        return null;
                     }
 
                     if (count < BatchSize)
