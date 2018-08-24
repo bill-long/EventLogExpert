@@ -101,17 +101,9 @@ export class EventLogExpertMenu {
 
     if (!this.windowManager.hasOpenLog(window)) {
       this.windowManager.setOpenLog(window, files[0]);
-      window.setTitle(`EventLogExpert ${app.getVersion()} ${files[0]}`);
-      window.on('page-title-updated', (event, title) => event.preventDefault());
       window.webContents.send('openLogFromFile', files[0], null);
     } else {
-      const newWindow = this.windowManager.createWindow();
-      newWindow.setTitle(`EventLogExpert ${files[0]}`);
-      newWindow.on('page-title-updated', (event, title) => event.preventDefault());
-      this.windowManager.setOpenLog(newWindow, files[0]);
-      newWindow.webContents.once('dom-ready', () => {
-        newWindow.webContents.send('openLogFromFile', files[0], null);
-      });
+      const newWindow = this.windowManager.createWindow(files[0]);
     }
   }
 

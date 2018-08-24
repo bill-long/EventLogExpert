@@ -14,8 +14,11 @@ const menuBar = new EventLogExpertMenu(windowManager);
 try {
 
   const shouldQuit = app.makeSingleInstance(function (commandLine, workingDirectory) {
-    // Someone tried to run a second instance, we should focus our window.
-    windowManager.focus();
+    if (commandLine.length >= 2) {
+      const newWindow = windowManager.createWindow(commandLine[1]);
+    } else {
+      windowManager.focus();
+    }
   });
 
   if (shouldQuit) {
@@ -28,7 +31,11 @@ try {
   // initialization and is ready to create browser windows.
   // Some APIs can only be used after this event occurs.
   app.on('ready', () => {
-    windowManager.createWindow();
+    if (process.argv.length >= 2) {
+      windowManager.createWindow(process.argv[1]);
+    } else {
+      windowManager.createWindow(null);
+    }
     autoUpdater.logger = log;
     log.transports.file.level = 'debug';
     autoUpdater.checkForUpdatesAndNotify();
@@ -47,7 +54,7 @@ try {
     // On OS X it's common to re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (windowManager.windowCount() === 0) {
-      const win = windowManager.createWindow();
+      const win = windowManager.createWindow(null);
     }
   });
 

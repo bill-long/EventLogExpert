@@ -29,7 +29,8 @@ export class ElectronService {
       this.ipcRenderer = window.require('electron').ipcRenderer;
       this.webFrame = window.require('electron').webFrame;
       this.remote = window.require('electron').remote;
-      this.extraResourcesPath = this.remote.app.getAppPath().endsWith('.asar') ? 'resources/' : '';
+      const appPath = this.remote.app.getAppPath();
+      this.extraResourcesPath = appPath.endsWith('app.asar') ? appPath.substr(0, appPath.length - 8) : '';
       this.clipboard = window.require('electron').clipboard;
 
       this.childProcess = window.require('child_process');
