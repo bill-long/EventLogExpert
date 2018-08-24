@@ -23,8 +23,6 @@ export class EventLogExpertWindowManager {
             height: size.height
         });
 
-        win.setTitle(`EventLogExpert ${app.getVersion()}`);
-
         if (this.serve) {
             require('electron-reload')(__dirname, {
                 electron: require(`${__dirname}/node_modules/electron`)
@@ -57,9 +55,9 @@ export class EventLogExpertWindowManager {
             win = null;
         });
 
+        this.setWindowInfo(win, log);
         this.openWindows.push({ window: win, openLog: log });
         if (log) {
-            this.setWindowInfo(win, log);
             win.webContents.once('dom-ready', () => {
                 win.webContents.send('openLogFromFile', log, null);
             });
@@ -88,7 +86,7 @@ export class EventLogExpertWindowManager {
 
     private setWindowInfo(window: BrowserWindow, log: string) {
         window.setTitle(`EventLogExpert ${app.getVersion()} ${log}`);
-        window.on('page-title-updated', (event, title) => event.preventDefault());
+        window.on('page-title-updated', e => e.preventDefault());
     }
 
     public windowCount() { return this.openWindows.length; }
