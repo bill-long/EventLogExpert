@@ -11,7 +11,7 @@ export class EventLogExpertWindowManager {
         this.openWindows = [];
     }
 
-    public createWindow(): BrowserWindow {
+    public createWindow(log: string): BrowserWindow {
         const electronScreen = screen;
         const size = electronScreen.getPrimaryDisplay().workAreaSize;
 
@@ -57,7 +57,13 @@ export class EventLogExpertWindowManager {
             win = null;
         });
 
-        this.openWindows.push({ window: win, openLog: null });
+        this.openWindows.push({ window: win, openLog: log });
+        if (log) {
+            this.setWindowInfo(win, log);
+            win.webContents.once('dom-ready', () => {
+                win.webContents.send('openLogFromFile', log, null);
+            });
+        }
         return win;
     }
 
@@ -70,23 +76,19 @@ export class EventLogExpertWindowManager {
     }
 
     public hasOpenLog(window: BrowserWindow) {
-        console.log('Checking if window has open log');
         const matches = this.openWindows.filter(l => l.window === window);
-        console.log('Found matches: ' + matches.length);
-        console.log(matches[0]);
         return (matches[0].openLog !== null);
     }
 
     public setOpenLog(window: BrowserWindow, log: string) {
-        console.log('Setting open log for window');
+        this.setWindowInfo(window, log);
         const matches = this.openWindows.filter(l => l.window === window);
-        console.log('Found matches: ' + matches.length);
-        console.log(matches[0]);
         matches[0].openLog = log;
-        console.log('Object after change:');
-        console.log(matches[0]);
-        console.log('Collection after change:');
-        console.log(this.openWindows);
+    }
+
+    private setWindowInfo(window: BrowserWindow, log: string) {
+        window.setTitle(`EventLogExpert ${app.getVersion()} ${log}`);
+        window.on('page-title-updated', (event, title) => event.preventDefault());
     }
 
     public windowCount() { return this.openWindows.length; }
