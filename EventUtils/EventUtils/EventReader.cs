@@ -50,6 +50,7 @@ namespace EventLogExpert
                         events.Add(new
                         {
                             evt.Id,
+                            evt.Qualifiers,
                             evt.LogName,
                             evt.MachineName,
                             evt.Level,
@@ -117,6 +118,7 @@ namespace EventLogExpert
                         events.Add(new
                         {
                             evt.Id,
+                            evt.Qualifiers,
                             evt.LogName,
                             evt.MachineName,
                             evt.Level,

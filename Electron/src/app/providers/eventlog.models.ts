@@ -3,10 +3,11 @@ export interface EventRecord {
     ProviderName: string;
     TimeCreated: string;
     Id: number;
+    Qualifiers: number;
     MachineName: string;
     Level: string;
     Task: number;
-    Keywords: any;
+    Keywords: number;
     User: string;
     Opcode: number;
     RecordId: number;

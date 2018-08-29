@@ -21,9 +21,13 @@
         <div>OpCode</div>
         <div>{{focusedEvent.OpcodeName}}</div>
       </div>
-      <button class="copy-button" type="button" (click)="copyEventToClipboard(focusedEvent)">Copy</button>
+      <button class="button" type="button" (click)="copyToClipboard(false)">Copy</button>
+      <button class="button" type="button" (click)="copyToClipboard(true)">Copy With Xml</button>
+      <button class="button" type="button" (click)="showXml = true" *ngIf="!showXml">Show Xml</button>
+      <button class="button" type="button" (click)="showXml = false" *ngIf="showXml">Hide Xml</button>
     </div>
     <div class="event-description" [innerHtml]="description$ | async"></div>
+    <pre *ngIf="showXml" lang="xml" class="event-xml">{{eventXml$ | async}}</pre>
   </div>
   <app-scrollbar [rowcount]="detailDiv.scrollHeight" [position]="detailDiv.scrollTop" [rowsVisible]="detailDiv.clientHeight"
     (updatePosition)="onScrollBar($event)"></app-scrollbar>
