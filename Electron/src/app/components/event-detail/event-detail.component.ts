@@ -23,6 +23,7 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
   focusedEvent$: Observable<EventRecord>;
   description$: Observable<SafeHtml>;
   eventXml$: Observable<string>;
+  showXml = false;
 
   constructor(
     private ds: DomSanitizer,
