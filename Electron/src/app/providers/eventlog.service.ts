@@ -36,7 +36,7 @@ export class EventLogService {
             uniqueRecordValues: { id: new Set<number>(), providerName: new Set<string>(), taskName: new Set<string>(['None']) }
         };
         this.actions$ = new Subject();
-        this.state$ = this.actions$.pipe(scan(reducer, initState), shareReplay());
+        this.state$ = this.actions$.pipe(scan(reducer, initState), shareReplay(1));
 
         /*
         // Listen for notifications from Main process
@@ -181,10 +181,6 @@ export class EventLogService {
         for (let i = 0; i < records.length; i++) {
             const r = records[i];
 
-            if (r.RecordId === 286186) {
-                const foo = 'bar';
-            }
-
             // Set the description string
             const m = await this.getMessage(r.ProviderName, r.Id, r.LogName, tagsByPriority);
             r.Description = this.formatDescription(r, m);
@@ -236,6 +232,7 @@ export class EventLogService {
                 this.messageCache[providerName][messageNumber][logName] = m[0].Text;
                 return m[0].Text;
             } else {
+                // If we didn't find anything for this provider and ID, return empty string
                 this.messageCache[providerName][messageNumber][logName] = '';
                 return '';
             }
@@ -243,6 +240,19 @@ export class EventLogService {
     }
 
     private formatDescription(record: EventRecord, messageFormat: string): string {
+        // If getMessage didn't find anything...
+        if (messageFormat === '') {
+            // And we have exactly one property
+            if (record.Properties.length === 1) {
+                // Return that property as the description. This is what certain EventRecords look like
+                // when the entire description is a string literal, and there is no provider DLL needed.
+                return record.Properties[0];
+            } else {
+                return 'The description for this event could not be found. The following information was included with the event:\n\n' +
+                    record.Properties.join('\n');
+            }
+        }
+
         const matches = messageFormat.match(this.formatRegexp);
         if (!matches || matches.length < 1) {
             return messageFormat;

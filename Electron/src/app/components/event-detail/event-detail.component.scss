@@ -22,8 +22,28 @@
     overflow: hidden;
 }
 
-.copy-button {
+.button {
     height: 45px;
     width: 100px;
     margin-right: 15px;
+}
+
+.tabs {
+    display: flex;
+    flex-direction: row;
+}
+
+.tab {
+    border: 1px solid white;
+    padding: 5px;
+}
+
+.tab.selected {
+    border-bottom: 0;
+}
+
+.tab-spacer {
+    border-bottom: 1px solid white;
+    height: 100%;
+    width: 5px;
 }
