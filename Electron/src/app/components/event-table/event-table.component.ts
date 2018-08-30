@@ -29,7 +29,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
   visibleRecords$ = new Subject<EventRecord[]>();
   rowsInView: number;
   ngUnsubscribe = new Subject<void>();
-  keyboardNavigation$ = new Subject<KeyboardEvent>();
+  arrowKeyNavigation = new Subject<KeyboardEvent>();
   windowResize$ = new Subject<void>();
   elementHeight: number;
 
@@ -47,12 +47,15 @@ export class EventTableComponent implements AfterViewInit, OnInit {
     // In order to provide a good experience when the user loads up an event log with
     // hundreds of thousands of records, we manually handle the scrolling by changing
     // which items we render when the mouse wheel moves.
-    combineLatest(this.state$, this.wheelMovement$, this.windowResize$)
+
+    // For wheel movement and window resize, we don't care if the focused event is in view
+    combineLatest(this.wheelMovement$)
       .pipe(
-        takeUntil(this.ngUnsubscribe)
+        takeUntil(this.ngUnsubscribe),
+        withLatestFrom(this.state$)
       )
       .subscribe(
-        (([s, w]) => {
+        (([[w], s]) => {
           if (s.recordsFiltered.length > 0) {
             this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
             let newRenderOffset = this.renderOffset;
@@ -65,51 +68,44 @@ export class EventTableComponent implements AfterViewInit, OnInit {
               }
             }
 
-            this.updateVisibleRecords(s, newRenderOffset);
+            this.updateVisibleRecords(s, newRenderOffset, false);
           } else {
-            this.updateVisibleRecords(s, 0);
+            this.updateVisibleRecords(s, 0, false);
           }
         }),
-      );
+    );
 
-    this.keyboardNavigation$
+    // For arrow key navigation, we must bring the focused event into view
+    this.arrowKeyNavigation
       .pipe(
         takeUntil(this.ngUnsubscribe),
         withLatestFrom(this.state$, this.visibleRecords$))
       .subscribe(([k, s, v]) => {
+        // Only act if there is a focused event
         if (s.focusedEvent) {
-          let focusedEventIndex = v.indexOf(s.focusedEvent);
-          this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
-
           // If the focused event isn't visible, make it visible.
-          if (focusedEventIndex === -1) {
-            const newRenderOffset = s.recordsFiltered.indexOf(s.focusedEvent) - 5;
-            this.renderOffset = newRenderOffset > 0 ? newRenderOffset : 0;
-            v = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
-            focusedEventIndex = v.indexOf(s.focusedEvent);
-          } else if (k.key === 'ArrowDown' && focusedEventIndex > this.rowsInView - 5) {
-            const diff = focusedEventIndex - (this.rowsInView - 5);
-            const newRenderOffset = Math.round(this.renderOffset + diff);
-            this.renderOffset = newRenderOffset;
-            v = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
-            focusedEventIndex = v.indexOf(s.focusedEvent);
+          let focusedEventIndex = v.indexOf(s.focusedEvent);
+          if (focusedEventIndex < 0) {
+            focusedEventIndex = this.updateVisibleRecords(s, this.renderOffset, true);
           }
 
           // Now we can deal with the arrow key.
           if (k.key === 'ArrowUp' && focusedEventIndex > 0) {
             this.eventLogService.actions$.next(new FocusEventAction(v[focusedEventIndex - 1]));
-            if (focusedEventIndex < 4 && this.renderOffset > 0) {
-              const newRenderOffset = this.renderOffset - 1;
-              this.updateVisibleRecords(s, newRenderOffset);
-            }
           } else if (k.key === 'ArrowDown' && focusedEventIndex < v.length - 1) {
             this.eventLogService.actions$.next(new FocusEventAction(v[focusedEventIndex + 1]));
-            if (focusedEventIndex > (v.length - 5) && this.renderOffset < s.records.length - 1) {
-              const newRenderOffset = this.renderOffset + 1;
-              this.updateVisibleRecords(s, newRenderOffset);
-            }
           }
         }
+      });
+
+    // For state changes (records filtered, sorted, etc), bring focused event into view
+    this.state$
+      .pipe(
+        takeUntil(this.ngUnsubscribe),
+        withLatestFrom(this.visibleRecords$)
+      )
+      .subscribe(([s, v]) => {
+        this.updateVisibleRecords(s, this.renderOffset, true);
       });
   }
 
@@ -121,7 +117,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-      this.keyboardNavigation$.next(e);
+      this.arrowKeyNavigation.next(e);
     }
   }
 
@@ -170,12 +166,41 @@ export class EventTableComponent implements AfterViewInit, OnInit {
     this.eventLogService.actions$.next(new FocusEventAction(evt));
   }
 
-  updateVisibleRecords(s: State, offset: number) {
+  updateVisibleRecords(s: State, offset: number, ensureFocusedVisible: boolean) {
     if (offset < 0) { offset = 0; }
     if (offset > s.recordsFiltered.length - 1) { offset = s.recordsFiltered.length - 10; }
     this.renderOffset = offset;
-    this.visibleRecords$.next(s.recordsFiltered
-      .slice(this.renderOffset, this.renderOffset + 100));
+    let newSlice = s.recordsFiltered
+      .slice(this.renderOffset, this.renderOffset + 100);
+    if (!ensureFocusedVisible || !s.focusedEvent) {
+      // Go ahead and finish
+      this.visibleRecords$.next(newSlice);
+      return null;
+    }
+
+    // Otherwise, more work to do
+    let focusedEventIndex = newSlice.indexOf(s.focusedEvent);
+    if (focusedEventIndex === -1) {
+      this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
+      const centerPosition = Math.floor(this.rowsInView / 2);
+      const newRenderOffset = s.recordsFiltered.indexOf(s.focusedEvent) - centerPosition;
+      this.renderOffset = newRenderOffset > 0 ? newRenderOffset : 0;
+      newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
+    }
+    else if (focusedEventIndex > this.rowsInView - 6) {
+      this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
+      const diff = focusedEventIndex - (this.rowsInView - 5);
+      const newRenderOffset = Math.round(this.renderOffset + diff);
+      this.renderOffset = newRenderOffset;
+      newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
+    }
+    else if (focusedEventIndex < 5 && this.renderOffset > 0) {
+      this.renderOffset -= 1;
+      newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
+    }
+
+    this.visibleRecords$.next(newSlice);
+    return newSlice.indexOf(s.focusedEvent);
   }
 
 }

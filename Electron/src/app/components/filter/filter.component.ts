@@ -1,5 +1,5 @@
 import { Component, OnInit, Input } from '@angular/core';
-import { FormGroup } from '@angular/forms';
+import { FormGroup, FormControl } from '@angular/forms';
 
 @Component({
   selector: 'app-filter',
@@ -11,6 +11,7 @@ export class FilterComponent implements OnInit {
   @Input() title: string;
   @Input() form: FormGroup;
   @Input() filter: Set<any>;
+  @Input() controlType: string;
   lastWheelMove: number;
   scrollTop = 0;
   anyNotSelected: boolean;
