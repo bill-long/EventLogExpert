@@ -45,29 +45,37 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
     }
 
     // Otherwise, we're setting a filter
-    // Remove the null current filter if it exists, since we're about to set one
-    if (this.recentFilters[0] === null) {
-      this.recentFilters.shift();
-    }
-
-    this.addToRecentFilters(filter);
+    this.addToRecentFilters(filter, true); // True indicates we're applying it
 
     localStorage.setItem('savedFilters', JSON.stringify(this.recentFilters));
 
     this.eventLogService.actions$.next(new FilterEventsAction(filter));
   }
 
-  private addToRecentFilters(filter: EventFilter) {
+  private addToRecentFilters(filter: EventFilter, isApplied: boolean) {
     const readableFilter = this.stringifyFilter(filter, true);
     const unreadableFilter = this.stringifyFilter(filter, false);
     const filterIndex = this.recentFilters.findIndex(f => f && f.readableFilter === readableFilter);
-    if (filterIndex < 0) {
-      this.recentFilters.unshift({ filter: unreadableFilter, readableFilter: readableFilter });
-      this.recentFilters = this.recentFilters.slice(0, 8);
-    } else {
+    const filterToAdd = { filter: unreadableFilter, readableFilter: readableFilter };
+
+    // First, remove it if it's in there
+    if (filterIndex > -1) {
       this.recentFilters.splice(filterIndex, 1);
-      this.recentFilters.unshift({ filter: unreadableFilter, readableFilter: readableFilter });
     }
+
+    // If this filter is applied, it goes right at the top
+    if (isApplied) {
+      if (this.recentFilters[0] === null) {
+        this.recentFilters[0] = filterToAdd;
+      } else {
+        this.recentFilters.unshift(filterToAdd);
+      }
+    } else {
+      // Otherwise it goes second
+      this.recentFilters.splice(1, 0, filterToAdd);
+    }
+
+    this.recentFilters = this.recentFilters.slice(0, this.recentFilters[0] === null ? 9 : 8);
   }
 
   applyCurrentFilter() {
@@ -82,7 +90,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
 
   findNext(filterString: string) {
     const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
-    this.addToRecentFilters(filter);
+    this.addToRecentFilters(filter, false);
     const func = getFilterFunction(filter);
     this.eventLogService.state$.pipe(take(1)).subscribe(s => {
       const startIndex = s.focusedEvent ? s.recordsFiltered.indexOf(s.focusedEvent) + 1 : 0;
@@ -97,7 +105,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
 
   findPrevious(filterString: string) {
     const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
-    this.addToRecentFilters(filter);
+    this.addToRecentFilters(filter, false);
     const func = getFilterFunction(filter);
     this.eventLogService.state$.pipe(take(1)).subscribe(s => {
       const startIndex = s.focusedEvent ? s.recordsFiltered.indexOf(s.focusedEvent) - 1 : 0;

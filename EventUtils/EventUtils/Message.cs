@@ -37,6 +37,12 @@
         public string Tag { get; set; }
 
         /// <summary>
+        ///     Some providers may include an XML template that describes
+        ///     the included properties.
+        /// </summary>
+        public string Template { get; set; }
+
+        /// <summary>
         ///     The text of the message
         /// </summary>
         public string Text { get; set; }

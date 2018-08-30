@@ -4,6 +4,7 @@ export interface Message {
     RawId: number;
     ShortId: number;
     Tag: string;
+    Template: string;
     Text: string;
 }
 

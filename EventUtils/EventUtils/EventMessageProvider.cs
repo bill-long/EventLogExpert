@@ -155,7 +155,8 @@ namespace EventLogExpert
                     ShortId = (short) ev.Id,
                     ProviderName = _providerName,
                     RawId = ev.Id,
-                    LogLink = ev.LogLink?.LogName
+                    LogLink = ev.LogLink?.LogName,
+                    Template = ev.Template
                 }));
             }
             catch (Exception ex)

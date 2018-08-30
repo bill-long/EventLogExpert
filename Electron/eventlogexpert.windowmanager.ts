@@ -85,7 +85,7 @@ export class EventLogExpertWindowManager {
     }
 
     private setWindowInfo(window: BrowserWindow, log: string) {
-        window.setTitle(`EventLogExpert ${app.getVersion()} ${log}`);
+        window.setTitle(`EventLogExpert ${app.getVersion()} ${log ? log : ''}`);
         window.on('page-title-updated', e => e.preventDefault());
     }
 

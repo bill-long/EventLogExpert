@@ -58,10 +58,7 @@ export class IngestComponent implements OnInit {
     this.dbService.getAllMessages$().subscribe(async m => {
       count += m.length;
       this.status[1] = `${count}`;
-      const writeString = m.map(msg => JSON.stringify(msg)).join('\n');
-      await this.electronService.fs.appendFile(fileName, writeString, err => {
-        if (err) { throw new Error(err.toString()); }
-      });
+      await this.writeMessagesToFile(m, fileName);
     },
       err => this.status[2] = `${err}`,
       () => this.status[3] = 'Done!');
@@ -96,14 +93,14 @@ export class IngestComponent implements OnInit {
       }
     }
 
-    this.status[2] = 'Saving...';
-    this.electronService.fs.writeFile(fileName, JSON.stringify(messages), err => {
-      this.ngZone.run(() => {
-        this.status[2] = `Saved ${messageCount}`;
-        this.status.push('Done!');
-        this.running = false;
-      });
-    });
+    this.status[2] = 'Writing messages...';
+    for (let i = 0; i < messages.length; i += 1000) {
+      this.ngZone.run(() => this.status[3] = i.toString());
+      await this.writeMessagesToFile(messages.slice(i, i + 1000), fileName);
+    }
+
+    this.ngZone.run(() => this.status[3] = 'Done!');
+    this.running = false;
   }
 
   getMessagesFromFile(filename: string): Observable<any[]> {
@@ -113,9 +110,11 @@ export class IngestComponent implements OnInit {
       const readStream = this.electronService.fs.createReadStream(filename);
       const lineReader = this.electronService.readline.createInterface(readStream);
       lineReader.on('line', (line: string) => {
+        console.log(line);
         if (line.startsWith(',')) {
           line = line.substr(1);
         }
+
         buffer.push(JSON.parse(line));
         if (buffer.length === maxBuffer) {
           o.next(buffer);
@@ -324,6 +323,15 @@ export class IngestComponent implements OnInit {
     this.allSelected = true;
     const controlNames = Object.getOwnPropertyNames(this.form.controls);
     controlNames.forEach(c => this.form.controls[c].setValue(true));
+  }
+
+  private async writeMessagesToFile(m: any[], fileName: string) {
+    const writeString = m.map(msg => JSON.stringify(msg)).join('\n') + '\n';
+    await this.electronService.fs.appendFile(fileName, writeString, err => {
+      if (err) {
+        throw new Error(err.toString());
+      }
+    });
   }
 
 }
