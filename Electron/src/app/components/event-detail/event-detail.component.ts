@@ -73,7 +73,8 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
 
   getEventXml(r: EventRecord) {
     if (!r) { return ''; }
-    return `<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">\r\n` +
+
+    let xml = `<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">\r\n` +
       `  <System>\r\n` +
       `    <Provider Name="${r.ProviderName}" />\r\n` +
       `    <EventID` + (r.Qualifiers ? ` Qualifiers="${r.Qualifiers}"` : ``) + `>${r.Id}</EventID>\r\n` +
@@ -85,10 +86,29 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
       `    <Channel>${r.LogName}</Channel>\r\n` +
       `    <Computer>${r.MachineName}</Computer>\r\n` +
       `  </System>\r\n` +
-      `  <EventData>\r\n` +
-      r.Properties.map(p => `    <Data>${p}</Data>`).join('\r\n') + '\r\n' +
-      `  </EventData>\r\n` +
+      `  <EventData>\r\n`;
+
+    const template = this.eventLogService.getTemplate(r);
+    if (template) {
+      let index = -1;
+      let propIndex = 0;
+      while (-1 < (index = template.indexOf('name=', index + 1))) {
+        if (-1 < index) {
+          const nameStart = index + 6;
+          const nameEnd = template.indexOf('"', nameStart);
+          const name = template.slice(nameStart, nameEnd);
+          xml += `    <${name}>${r.Properties[propIndex]}</${name}>\r\n`;
+          propIndex++;
+        }
+      }
+    } else {
+      xml += r.Properties.map(p => `    <Data>${p}</Data>`).join('\r\n') + '\r\n';
+    }
+
+    xml += `  </EventData>\r\n` +
       `</Event>`;
+
+    return xml;
   }
 
   ngAfterViewInit() {

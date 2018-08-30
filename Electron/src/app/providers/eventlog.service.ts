@@ -6,13 +6,14 @@ import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
 import { DatabaseService } from './database.service';
 import { EventRecord } from './eventlog.models';
+import { Message } from './database.models';
 
 @Injectable()
 export class EventLogService {
 
     actions$: Subject<Action>;
     state$: Observable<State>;
-    messageCache: { [key: string]: { [key: string]: { [key: string]: string } } };
+    messageCache: { [key: string]: { [key: string]: { [key: string]: Message } } };
     formatRegexp = new RegExp(/%([0-9]+)/g);
 
     constructor(private eventUtils: EventUtils, private ngZone: NgZone,
@@ -71,6 +72,10 @@ export class EventLogService {
 
             this.updateTextProperties(tagsByPriority);
         });
+    }
+
+    getTemplate(r: EventRecord) {
+        return this.messageCache[r.ProviderName][r.Id][r.LogName].Template;
     }
 
     loadActiveLog(logName: string, serverName: string) {
@@ -205,28 +210,28 @@ export class EventLogService {
 
         const messageFromCache = this.messageCache[providerName][messageNumber][logName];
         if (messageFromCache !== undefined) {
-            return messageFromCache;
+            return messageFromCache ? messageFromCache.Text : '';
         } else {
             const m = await this.dbService.findMessages(providerName, messageNumber, logName);
             if (m && m.length > 0) {
                 if (m.length === 1) {
-                    this.messageCache[providerName][messageNumber][logName] = m[0].Text;
+                    this.messageCache[providerName][messageNumber][logName] = m[0];
                     return m[0].Text;
                 }
                 for (let i = 0; i < tagsByPriority.length; i++) {
                     const messageByTag = m.find(message => message.Tag === tagsByPriority[i]);
                     if (messageByTag) {
-                        this.messageCache[providerName][messageNumber][logName] = messageByTag.Text;
+                        this.messageCache[providerName][messageNumber][logName] = messageByTag;
                         return messageByTag.Text;
                     }
                 }
 
                 // If we get here, we didn't find any matching tag somehow? Just pick one and hope for the best
-                this.messageCache[providerName][messageNumber][logName] = m[0].Text;
+                this.messageCache[providerName][messageNumber][logName] = m[0];
                 return m[0].Text;
             } else {
-                // If we didn't find anything for this provider and ID, return empty string
-                this.messageCache[providerName][messageNumber][logName] = '';
+                // If we didn't find anything for this provider and ID, set null and return empty string
+                this.messageCache[providerName][messageNumber][logName] = null;
                 return '';
             }
         }

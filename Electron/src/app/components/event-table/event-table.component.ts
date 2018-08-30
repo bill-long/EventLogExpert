@@ -186,20 +186,19 @@ export class EventTableComponent implements AfterViewInit, OnInit {
     }
 
     // Otherwise, more work to do
-    let focusedEventIndex = newSlice.indexOf(s.focusedEvent);
+    this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
+    const focusedEventIndex = newSlice.indexOf(s.focusedEvent);
     if (focusedEventIndex === -1) {
       const centerPosition = Math.floor(this.rowsInView / 2);
       const newRenderOffset = s.recordsFiltered.indexOf(s.focusedEvent) - centerPosition;
       this.renderOffset = newRenderOffset > 0 ? newRenderOffset : 0;
       newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
-    }
-    else if (focusedEventIndex > this.rowsInView) {
+    } else if (focusedEventIndex > this.rowsInView) {
       const diff = focusedEventIndex - (this.rowsInView);
       const newRenderOffset = Math.round(this.renderOffset + diff);
       this.renderOffset = newRenderOffset;
       newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
-    }
-    else if (focusedEventIndex < 1 && this.renderOffset > 0) {
+    } else if (focusedEventIndex < 1 && this.renderOffset > 0) {
       this.renderOffset -= 1;
       newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
     }
