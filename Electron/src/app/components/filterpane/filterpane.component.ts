@@ -18,6 +18,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   sources: FormGroup;
   tasks: FormGroup;
   levels: FormGroup;
+  description: FormGroup;
   recentFilters: { filter: string, readableFilter: string }[];
 
   constructor(private eventLogService: EventLogService) {
@@ -90,7 +91,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       sources: providerFilter,
       tasks: taskFilter,
       levels: levelFilter,
-      description: null
+      description: this.description.controls.description.value
     };
 
     this.applyFilter(filter);
@@ -134,11 +135,16 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       levels['Error'] = new FormControl(!s.filter || !s.filter.levels || s.filter.levels.has('Error'));
       this.levels = new FormGroup(levels);
 
+      this.description = new FormGroup(
+        { description: new FormControl(s.filter ? s.filter.description : '') }
+      );
+
       this.form = new FormGroup({
         ids: this.ids,
         sources: this.sources,
         tasks: this.tasks,
-        levels: this.levels
+        levels: this.levels,
+        description: this.description
       });
     });
   }
