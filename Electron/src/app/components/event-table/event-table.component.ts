@@ -48,7 +48,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
     // hundreds of thousands of records, we manually handle the scrolling by changing
     // which items we render when the mouse wheel moves.
 
-    // For wheel movement and window resize, we don't care if the focused event is in view
+    // For wheel movement, we don't care if the focused event is in view
     combineLatest(this.wheelMovement$)
       .pipe(
         takeUntil(this.ngUnsubscribe),
@@ -74,6 +74,13 @@ export class EventTableComponent implements AfterViewInit, OnInit {
           }
         }),
     );
+
+    // For window resize, update the rowsInView in case of another view change
+    this.windowResize$
+      .pipe(takeUntil(this.ngUnsubscribe))
+      .subscribe(() => {
+        this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
+      });
 
     // For arrow key navigation, we must bring the focused event into view
     this.arrowKeyNavigation
@@ -181,20 +188,18 @@ export class EventTableComponent implements AfterViewInit, OnInit {
     // Otherwise, more work to do
     let focusedEventIndex = newSlice.indexOf(s.focusedEvent);
     if (focusedEventIndex === -1) {
-      this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
       const centerPosition = Math.floor(this.rowsInView / 2);
       const newRenderOffset = s.recordsFiltered.indexOf(s.focusedEvent) - centerPosition;
       this.renderOffset = newRenderOffset > 0 ? newRenderOffset : 0;
       newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
     }
-    else if (focusedEventIndex > this.rowsInView - 6) {
-      this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
-      const diff = focusedEventIndex - (this.rowsInView - 5);
+    else if (focusedEventIndex > this.rowsInView) {
+      const diff = focusedEventIndex - (this.rowsInView);
       const newRenderOffset = Math.round(this.renderOffset + diff);
       this.renderOffset = newRenderOffset;
       newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
     }
-    else if (focusedEventIndex < 5 && this.renderOffset > 0) {
+    else if (focusedEventIndex < 1 && this.renderOffset > 0) {
       this.renderOffset -= 1;
       newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
     }
