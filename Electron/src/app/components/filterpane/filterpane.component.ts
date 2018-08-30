@@ -58,21 +58,24 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
     const filterIndex = this.recentFilters.findIndex(f => f && f.readableFilter === readableFilter);
     const filterToAdd = { filter: unreadableFilter, readableFilter: readableFilter };
 
-    // First, remove it if it's in there
-    if (filterIndex > -1) {
-      this.recentFilters.splice(filterIndex, 1);
-    }
+    // If the filter is being applied, make sure it's first in the array.
+    // If the filter is not be applied, and is already in there, then don't do anything.
+    // If the filter is not being applied, and is not in there, add it at position 1.
 
-    // If this filter is applied, it goes right at the top
     if (isApplied) {
+      if (filterIndex > -1) {
+        this.recentFilters.splice(filterIndex, 1);
+      }
+
       if (this.recentFilters[0] === null) {
         this.recentFilters[0] = filterToAdd;
       } else {
         this.recentFilters.unshift(filterToAdd);
       }
     } else {
-      // Otherwise it goes second
-      this.recentFilters.splice(1, 0, filterToAdd);
+      if (filterIndex === -1) {
+        this.recentFilters.splice(1, 0, filterToAdd);
+      }
     }
 
     this.recentFilters = this.recentFilters.slice(0, this.recentFilters[0] === null ? 9 : 8);
