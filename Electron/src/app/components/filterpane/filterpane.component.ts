@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { EventLogService, FilterEventsAction, EventFilter } from '../../providers/eventlog.service';
-import { takeUntil, distinctUntilChanged } from 'rxjs/operators';
+import { EventLogService, FilterEventsAction, EventFilter, getFilterFunction, FocusEventAction } from '../../providers/eventlog.service';
+import { takeUntil, distinctUntilChanged, take } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { FormGroup, AbstractControl, FormControl } from '@angular/forms';
 
@@ -50,23 +50,67 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       this.recentFilters.shift();
     }
 
-    const readableFilter = this.stringifyFilter(filter, true);
-    const unreadableFilter = this.stringifyFilter(filter, false);
-    const filterIndex = this.recentFilters.findIndex(f => f && f.readableFilter === readableFilter);
-    if (filterIndex < 0) {
-      this.recentFilters.unshift({ filter: unreadableFilter, readableFilter: readableFilter });
-      this.recentFilters = this.recentFilters.slice(0, 5);
-    } else {
-      this.recentFilters.splice(filterIndex, 1);
-      this.recentFilters.unshift({ filter: unreadableFilter, readableFilter: readableFilter });
-    }
+    this.addToRecentFilters(filter);
 
     localStorage.setItem('savedFilters', JSON.stringify(this.recentFilters));
 
     this.eventLogService.actions$.next(new FilterEventsAction(filter));
   }
 
+  private addToRecentFilters(filter: EventFilter) {
+    const readableFilter = this.stringifyFilter(filter, true);
+    const unreadableFilter = this.stringifyFilter(filter, false);
+    const filterIndex = this.recentFilters.findIndex(f => f && f.readableFilter === readableFilter);
+    if (filterIndex < 0) {
+      this.recentFilters.unshift({ filter: unreadableFilter, readableFilter: readableFilter });
+      this.recentFilters = this.recentFilters.slice(0, 8);
+    } else {
+      this.recentFilters.splice(filterIndex, 1);
+      this.recentFilters.unshift({ filter: unreadableFilter, readableFilter: readableFilter });
+    }
+  }
+
   applyCurrentFilter() {
+    const filter: EventFilter = this.getFormFilter();
+    this.applyFilter(filter);
+  }
+
+  applySavedFilter(filterString: string) {
+    const filter = this.unstringifyFilter(filterString);
+    this.applyFilter(filter);
+  }
+
+  findNext(filterString: string) {
+    const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
+    this.addToRecentFilters(filter);
+    const func = getFilterFunction(filter);
+    this.eventLogService.state$.pipe(take(1)).subscribe(s => {
+      const startIndex = s.focusedEvent ? s.recordsFiltered.indexOf(s.focusedEvent) + 1 : 0;
+      for (let i = startIndex; i < s.recordsFiltered.length; i++) {
+        if (func(s.recordsFiltered[i])) {
+          this.eventLogService.actions$.next(new FocusEventAction(s.recordsFiltered[i]));
+          break;
+        }
+      }
+    });
+  }
+
+  findPrevious(filterString: string) {
+    const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
+    this.addToRecentFilters(filter);
+    const func = getFilterFunction(filter);
+    this.eventLogService.state$.pipe(take(1)).subscribe(s => {
+      const startIndex = s.focusedEvent ? s.recordsFiltered.indexOf(s.focusedEvent) - 1 : 0;
+      for (let i = startIndex; i >= 0; i--) {
+        if (func(s.recordsFiltered[i])) {
+          this.eventLogService.actions$.next(new FocusEventAction(s.recordsFiltered[i]));
+          break;
+        }
+      }
+    });
+  }
+
+  private getFormFilter() {
     const allIds = Object.getOwnPropertyNames(this.form.value.ids);
     const idsNotSelected = allIds.filter(i => this.form.value.ids[i] === false);
     const idFilter = idsNotSelected.length === 0 ? null :
@@ -94,12 +138,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       description: this.description.controls.description.value
     };
 
-    this.applyFilter(filter);
-  }
-
-  applySavedFilter(filterString: string) {
-    const filter = this.unstringifyFilter(filterString);
-    this.applyFilter(filter);
+    return filter;
   }
 
   ngOnDestroy() {

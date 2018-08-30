@@ -2,16 +2,26 @@
   <app-filter [title]="'Sources'" [form]="sources" [filter]="(eventLogService.state$ | async)?.filter?.providerFilter" [controlType]="'checkbox'"></app-filter>
   <app-filter [title]="'Categories'" [form]="tasks" [filter]="(eventLogService.state$ | async)?.filter?.taskFilter" [controlType]="'checkbox'"></app-filter>
   <app-filter [title]="'Event IDs'" [form]="ids" [filter]="(eventLogService.state$ | async)?.filter?.idFilter" [controlType]="'checkbox'"></app-filter>
-  <app-filter [title]="'Severity'" [form]="levels" [filter]="(eventLogService.state$ | async)?.filter?.levelFilter" [controlType]="'checkbox'"></app-filter>
-  <app-filter [title]="'Description'" [form]="description" [filter]="(eventLogService.state$ | async)?.filter?.descriptionFilter" [controlType]="'textarea'"></app-filter>
-  <div class="recent-filters" *ngIf="recentFilters && recentFilters.length">
-    <div class="recent-filters-title" *ngIf="recentFilters[0]">Current Filter</div>
-    <button title="{{recentFilters[0].readableFilter}}" *ngIf="recentFilters[0]">{{recentFilters[0].readableFilter}}</button>
-    <div class="recent-filters-title">Recent Filters</div>
-    <button *ngFor="let filter of recentFilters | slice:1"(click)="applySavedFilter(filter.filter)" title="{{filter.readableFilter}}">{{filter.readableFilter}}</button>
+  <div class="stacked-filters">
+    <app-filter [title]="'Severity'" [form]="levels" [filter]="(eventLogService.state$ | async)?.filter?.levelFilter" [controlType]="'checkbox'"></app-filter>
+    <app-filter class="flex-one" [title]="'Description'" [form]="description" [filter]="(eventLogService.state$ | async)?.filter?.descriptionFilter"
+      [controlType]="'textarea'"></app-filter>
   </div>
   <div class="button-div">
     <button (click)="applyCurrentFilter()">Apply Filter</button>
     <button (click)="resetFilter()">Clear Filter</button>
+    <button (click)="findNext()">Find Next</button>
+    <button (click)="findPrevious()">Find Previous</button>
+  </div>
+  <div class="recent-filters" *ngIf="recentFilters && recentFilters.length">
+    <div class="recent-filters-title" *ngIf="recentFilters[0]">Current Filter</div>
+    <input readonly type="text" title="{{recentFilters[0].readableFilter}}" *ngIf="recentFilters[0]" value="{{recentFilters[0].filter}}" />
+    <div class="recent-filters-title">Recent Filters</div>
+    <div class="recent-filter" *ngFor="let filter of recentFilters | slice:1">
+      <input readonly type="text" title="{{filter.readableFilter}}" value="{{filter.filter}}" />
+      <button (click)="applySavedFilter(filter.filter)">Apply</button>
+      <button (click)="findNext(filter.filter)">Next</button>
+      <button (click)="findPrevious(filter.filter)">Prev</button>
+    </div>
   </div>
 </div>

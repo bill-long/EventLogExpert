@@ -16,6 +16,7 @@ export class ScrollbarComponent implements OnInit, OnChanges, OnDestroy {
   @Input() rowsVisible: number;
   @Output() updatePosition: EventEmitter<number>;
   cursorSize = 20;
+  subtractCursorSize = false;
   padding: number;
   dragData: { mouseY: number, padding: number };
 
@@ -31,11 +32,17 @@ export class ScrollbarComponent implements OnInit, OnChanges, OnDestroy {
 
     const ne = this.el.nativeElement as Element;
     let height = ne.clientHeight;
+
     if (this.rowsVisible > 1) {
       const percentVisible = this.rowsVisible / this.rowcount;
       this.cursorSize = height * percentVisible;
-      if (this.cursorSize < 20) { this.cursorSize = 20; }
+      if (this.cursorSize < 20) {
+        this.cursorSize = 20;
+        this.subtractCursorSize = true;
+        height = height - this.cursorSize;
+      }
     } else {
+      this.subtractCursorSize = true;
       height = height - this.cursorSize;
     }
 
@@ -54,17 +61,21 @@ export class ScrollbarComponent implements OnInit, OnChanges, OnDestroy {
   @HostListener('window:mousemove', ['$event'])
   onMouseMove(evt: MouseEvent) {
     if (this.dragData != null) {
-      const ne = this.el.nativeElement as Element;
-      let height = ne.clientHeight;
-
       const difference = this.dragData.mouseY - evt.clientY;
       this.padding = this.dragData.padding - difference;
-      if (this.padding < 0) { this.padding = 0; }
-      if (this.padding > height - this.cursorSize) { this.padding = height - this.cursorSize; }
 
-      if (this.rowsVisible === 1) {
+      const ne = this.el.nativeElement as Element;
+      let height = ne.clientHeight;
+      if (this.subtractCursorSize) {
         height = height - this.cursorSize;
+        if (this.padding > height) { this.padding = height; }
+      } else {
+        if (this.padding > height - this.cursorSize) {
+          this.padding = height - this.cursorSize;
+        }
       }
+
+      if (this.padding < 0) { this.padding = 0; }
 
       const rowsPerPixel = this.rowcount / height;
       let newPosition = Math.round(rowsPerPixel * this.padding);

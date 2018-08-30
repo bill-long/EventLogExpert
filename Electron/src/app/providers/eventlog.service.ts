@@ -38,13 +38,6 @@ export class EventLogService {
         this.actions$ = new Subject();
         this.state$ = this.actions$.pipe(scan(reducer, initState), shareReplay(1));
 
-        /*
-        // Listen for notifications from Main process
-        electronSvc.ipcRenderer.on('openActiveLog',
-            (ev, logName, serverName) => {
-                this.actions$.next(new LoadActiveLogAction(logName, serverName));
-            }); */
-
         // Side effects of certain actions
         this.actions$.pipe(filter(a => a instanceof LoadActiveLogAction)).subscribe((a: LoadActiveLogAction) => {
             this.loadActiveLog(a.logName, a.serverName);
@@ -560,7 +553,12 @@ const reducer = (state: State, action: Action): State => {
 
 const filterEvents = (r: EventRecord[], f: EventFilter) => {
     if (!f) { return r; }
-    return r.filter(record => {
+    const func = getFilterFunction(f);
+    return r.filter(func);
+};
+
+export const getFilterFunction = (f: EventFilter) => {
+    const func = (record) => {
         if (f.ids && !f.ids.has(record.Id)) { return false; }
         if (f.sources && !f.sources.has(record.ProviderName)) { return false; }
         if (f.tasks && !f.tasks.has(record.TaskName)) { return false; }
@@ -572,5 +570,7 @@ const filterEvents = (r: EventRecord[], f: EventFilter) => {
         }
 
         return true;
-    });
+    };
+
+    return func;
 };
