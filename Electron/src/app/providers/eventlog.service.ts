@@ -15,6 +15,7 @@ export class EventLogService {
     state$: Observable<State>;
     messageCache: { [key: string]: { [key: string]: { [key: string]: Message } } };
     formatRegexp = new RegExp(/%([0-9]+)/g);
+    timeFormat: Intl.DateTimeFormat;
 
     constructor(private eventUtils: EventUtils, private ngZone: NgZone,
         private electronSvc: ElectronService, private dbService: DatabaseService) {
@@ -88,6 +89,11 @@ export class EventLogService {
         // Get an event reader delegate
         const delegate: any = this.eventUtils.getEventLogFileReader({ file }, true);
         this.loadEventsFromReaderDelegate(delegate);
+    }
+
+    setTimeZone(tzName: string) {
+        this.timeFormat = Intl.DateTimeFormat(navigator.language,
+            { timeZone: tzName, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
     }
 
     /**
@@ -196,6 +202,9 @@ export class EventLogService {
             } else {
                 r.OpcodeName = '';
             }
+
+            // Set the time string using the user-specified zone
+            r.TimeCreatedString = this.timeFormat.format(r.TimeCreated);
         }
     }
 
