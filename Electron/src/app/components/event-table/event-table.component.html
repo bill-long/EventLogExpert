@@ -21,7 +21,7 @@
       <tr *ngFor="let evt of visibleRecords$ | async as visibleRecords" (mousedown)="selectEvent(evt, $event)" [ngClass]="{'selected': state.selectedEvents.indexOf(evt) > -1 }">
         <td>{{evt.RecordId}}</td>
         <td class="table-divider"></td>
-        <td nowrap [ngStyle]="{ 'width': columnWidths['Time'] + 'px' }">{{evt.TimeCreated | date:'medium'}}</td>
+        <td nowrap [ngStyle]="{ 'width': columnWidths['Time'] + 'px' }">{{evt.TimeCreatedString}}</td>
         <td class="table-divider"></td>
         <td>{{evt.Id}}</td>
         <td class="table-divider"></td>

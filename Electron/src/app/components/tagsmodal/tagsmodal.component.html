@@ -1,5 +1,9 @@
 <div class="modal" [ngClass]="{ hidden: !visible }">
   <div class="modal-content bg-dark">
+    <h3>Time Zone</h3>
+    <select [(ngModel)]="currentTimeZoneName" class="bg-dark fg4-dark">
+      <option *ngFor="let tz of allTimeZoneNames" [value]="tz">{{tz}}</option>
+    </select>
     <h3>Tag Priority</h3>
     <div class="tag-list">
       <div class="tag" *ngFor="let tag of displayedTags; first as isFirst; last as isLast">

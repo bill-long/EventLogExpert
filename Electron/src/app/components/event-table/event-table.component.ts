@@ -32,8 +32,10 @@ export class EventTableComponent implements AfterViewInit, OnInit {
   arrowKeyNavigation = new Subject<KeyboardEvent>();
   windowResize$ = new Subject<void>();
   elementHeight: number;
+  timeZoneName: string;
 
   constructor(private eventLogService: EventLogService, private ref: ElementRef) {
+    this.timeZoneName = eventLogService.timeZoneName;
     this.state$ = this.eventLogService.state$;
     this.rowsInView = 1;
   }

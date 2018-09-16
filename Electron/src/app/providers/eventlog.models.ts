@@ -1,7 +1,7 @@
 export interface EventRecord {
     LogName: string;
     ProviderName: string;
-    TimeCreated: string;
+    TimeCreated: Date;
     Id: number;
     Qualifiers: number;
     MachineName: string;
@@ -17,6 +17,7 @@ export interface EventRecord {
     TaskName: string;
     LevelName: string;
     OpcodeName: string;
+    TimeCreatedString: string;
 
     isFocused: boolean;
 }

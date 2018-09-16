@@ -28,7 +28,8 @@
     "electron-edge-js": "^8.3.4",
     "electron-is-dev": "^0.3.0",
     "electron-log": "^2.2.17",
-    "electron-updater": "^3.1.1"
+    "electron-updater": "^3.1.1",
+    "moment-timezone": "^0.5.21"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "0.6.3",
