@@ -572,15 +572,32 @@ const filterEvents = (r: EventRecord[], f: EventFilter) => {
 };
 
 export const getFilterFunction = (f: EventFilter) => {
+    let regex: RegExp = null;
+    if (f.description) {
+        if (f.description.startsWith('/')) {
+            const lastSlash = f.description.lastIndexOf('/');
+            if (lastSlash > -1) {
+                const exp = f.description.substring(1, lastSlash);
+                const flags = f.description.substring(lastSlash + 1);
+                regex = new RegExp(exp, flags);
+            }
+        }
+
+        if (regex === null) {
+            // If still null, then we couldn't parse it as a regex, so just match anything
+            // that contains this string, ignoring case. To do that, escape any regex symbols.
+            // See https://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
+            const escapedRegexString = f.description.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            regex = new RegExp(escapedRegexString, 'i');
+        }
+    }
     const func = (record) => {
         if (f.ids && !f.ids.has(record.Id)) { return false; }
         if (f.sources && !f.sources.has(record.ProviderName)) { return false; }
         if (f.tasks && !f.tasks.has(record.TaskName)) { return false; }
         if (f.levels && !f.levels.has(record.LevelName)) { return false; }
         if (f.description) {
-            if (record.Description.indexOf(f.description) < 0) {
-                return false;
-            }
+            return regex.test(record.Description);
         }
 
         return true;
