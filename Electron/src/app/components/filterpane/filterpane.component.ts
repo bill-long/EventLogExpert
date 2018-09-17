@@ -146,7 +146,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       sources: providerFilter,
       tasks: taskFilter,
       levels: levelFilter,
-      description: this.description.controls.description.value
+      description: { text: this.description.controls.Description.value, negate: this.description.controls.Negate.value }
     };
 
     return filter;
@@ -186,7 +186,10 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       this.levels = new FormGroup(levels);
 
       this.description = new FormGroup(
-        { description: new FormControl(s.filter ? s.filter.description : '') }
+        {
+          Description: new FormControl(s.filter && s.filter.description ? s.filter.description.text : ''),
+          Negate: new FormControl(s.filter && s.filter.description ? s.filter.description.negate : false)
+        }
       );
 
       this.form = new FormGroup({
@@ -210,7 +213,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
    */
   stringifyFilter(filter: EventFilter, indentation: boolean): string {
     const slimFilter = {};
-    if (filter.description) {
+    if (filter.description && filter.description.text) {
       slimFilter['description'] = filter.description;
     }
     if (filter.ids && filter.ids.size > 0) {
@@ -236,7 +239,10 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   unstringifyFilter(s: string): EventFilter {
     const strObj = JSON.parse(s);
     return {
-      description: strObj['description'] ? strObj['description'] : null,
+      description: strObj['description'] ?
+        (typeof (strObj['description']) === 'string' ?     // If it's a string then convert
+          { text: strObj['description'], negate: false } :  // from the old format
+          strObj['description']) : null,
       ids: strObj['ids'] ? new Set(strObj['ids']) : null,
       levels: strObj['levels'] ? new Set(strObj['levels']) : null,
       sources: strObj['sources'] ? new Set(strObj['sources']) : null,

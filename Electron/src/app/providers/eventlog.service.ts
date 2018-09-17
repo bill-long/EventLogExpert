@@ -298,7 +298,7 @@ export interface EventFilter {
     sources: Set<string>;
     tasks: Set<string>;
     levels: Set<string>;
-    description: string;
+    description: { text: string, negate: boolean };
 }
 
 // Sort for sorting events
@@ -574,11 +574,11 @@ const filterEvents = (r: EventRecord[], f: EventFilter) => {
 export const getFilterFunction = (f: EventFilter) => {
     let regex: RegExp = null;
     if (f.description) {
-        if (f.description.startsWith('/')) {
-            const lastSlash = f.description.lastIndexOf('/');
+        if (f.description.text.startsWith('/')) {
+            const lastSlash = f.description.text.lastIndexOf('/');
             if (lastSlash > -1) {
-                const exp = f.description.substring(1, lastSlash);
-                const flags = f.description.substring(lastSlash + 1);
+                const exp = f.description.text.substring(1, lastSlash);
+                const flags = f.description.text.substring(lastSlash + 1);
                 regex = new RegExp(exp, flags);
             }
         }
@@ -587,7 +587,7 @@ export const getFilterFunction = (f: EventFilter) => {
             // If still null, then we couldn't parse it as a regex, so just match anything
             // that contains this string, ignoring case. To do that, escape any regex symbols.
             // See https://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
-            const escapedRegexString = f.description.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedRegexString = f.description.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             regex = new RegExp(escapedRegexString, 'i');
         }
     }
@@ -597,7 +597,11 @@ export const getFilterFunction = (f: EventFilter) => {
         if (f.tasks && !f.tasks.has(record.TaskName)) { return false; }
         if (f.levels && !f.levels.has(record.LevelName)) { return false; }
         if (f.description) {
-            return regex.test(record.Description);
+            if (f.description.negate) {
+                return !regex.test(record.Description);
+            } else {
+                return regex.test(record.Description);
+            }
         }
 
         return true;

@@ -4,12 +4,12 @@
     <div #filterItemsDiv class="filter-items" [scrollTop]="scrollTop" (wheel)="onWheel($event, filterItemsDiv)">
       <button *ngIf="anyNotSelected && controlType === 'checkbox'" (click)="setAllFormValues(true)">Select All</button>
       <button *ngIf="!anyNotSelected && controlType === 'checkbox'" (click)="setAllFormValues(false)">Deselect All</button>
-      <div class="filter-item" *ngFor="let item of getControlNames()">
-        <div *ngIf="controlType === 'checkbox'">
+      <div class="filter-item" *ngFor="let item of getControlNames(); index as i">
+        <div *ngIf="getControlType(i) === 'checkbox'">
           <input type="checkbox" name="{{item}}" id="{{item}}" [formControlName]="item">
           <label for="{{item}}">{{item}}</label>
         </div>
-        <div *ngIf="controlType !== 'checkbox'">
+        <div *ngIf="getControlType(i) === 'textarea'">
           <textarea [formControlName]="item"></textarea>
         </div>
       </div>

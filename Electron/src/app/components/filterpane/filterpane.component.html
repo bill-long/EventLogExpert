@@ -5,7 +5,7 @@
   <div class="stacked-filters">
     <app-filter [title]="'Severity'" [form]="levels" [filter]="(eventLogService.state$ | async)?.filter?.levelFilter" [controlType]="'checkbox'"></app-filter>
     <app-filter class="flex-one" [title]="'Description'" [form]="description" [filter]="(eventLogService.state$ | async)?.filter?.descriptionFilter"
-      [controlType]="'textarea'"></app-filter>
+      [controlType]="['textarea', 'checkbox']"></app-filter>
   </div>
   <div class="button-div">
     <button (click)="applyCurrentFilter()">Apply Filter</button>
