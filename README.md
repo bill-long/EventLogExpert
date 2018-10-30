@@ -2,6 +2,10 @@
 
 A Windows Event Log viewer for IT professionals and power users.
 
+## Build status
+
+[![Build Status](https://exchangeeeteam.visualstudio.com/EventLogExpert/_apis/build/status/EventLogExpert-CI)](https://exchangeeeteam.visualstudio.com/EventLogExpert/_build/latest?definitionId=9)
+
 ## Contributing
 
 ### Prerequisites
