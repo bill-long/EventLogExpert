@@ -18,6 +18,7 @@ export interface EventRecord {
     LevelName: string;
     OpcodeName: string;
     TimeCreatedString: string;
+    Xml: string;
 
     isFocused: boolean;
 }

@@ -94,7 +94,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   findNext(filterString: string) {
     const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
     this.addToRecentFilters(filter, false);
-    const func = getFilterFunction(filter);
+    const func = getFilterFunction(filter, this.eventLogService);
     this.eventLogService.state$.pipe(take(1)).subscribe(s => {
       const startIndex = s.focusedEvent ? s.recordsFiltered.indexOf(s.focusedEvent) + 1 : 0;
       for (let i = startIndex; i < s.recordsFiltered.length; i++) {
@@ -109,7 +109,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   findPrevious(filterString: string) {
     const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
     this.addToRecentFilters(filter, false);
-    const func = getFilterFunction(filter);
+    const func = getFilterFunction(filter, this.eventLogService);
     this.eventLogService.state$.pipe(take(1)).subscribe(s => {
       const startIndex = s.focusedEvent ? s.recordsFiltered.indexOf(s.focusedEvent) - 1 : 0;
       for (let i = startIndex; i >= 0; i--) {
@@ -146,7 +146,11 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       sources: providerFilter,
       tasks: taskFilter,
       levels: levelFilter,
-      description: { text: this.description.controls.Description.value, negate: this.description.controls.Negate.value }
+      description: {
+        text: this.description.controls.Description.value,
+        negate: this.description.controls['Not match'].value,
+        includeXml: this.description.controls['Include Xml'].value
+      }
     };
 
     return filter;
@@ -188,7 +192,8 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       this.description = new FormGroup(
         {
           Description: new FormControl(s.filter && s.filter.description ? s.filter.description.text : ''),
-          Negate: new FormControl(s.filter && s.filter.description ? s.filter.description.negate : false)
+          'Not match': new FormControl(s.filter && s.filter.description ? s.filter.description.negate : false),
+          'Include Xml': new FormControl(s.filter && s.filter.description ? s.filter.description.includeXml : false)
         }
       );
 
