@@ -40,21 +40,44 @@ export class EventLogService {
         this.actions$ = new Subject();
         this.state$ = this.actions$.pipe(scan(reducer, initState), shareReplay(1));
 
-        // Side effects of certain actions
+        this.configureSideEffects();
+    }
+
+    configureSideEffects() {
+        // Load active log when selected from menu
         this.actions$.pipe(filter(a => a instanceof LoadActiveLogAction)).subscribe((a: LoadActiveLogAction) => {
             this.loadActiveLog(a.logName, a.serverName);
         });
 
+        // Load log file when selected from menu
         this.actions$.pipe(filter(a => a instanceof LoadLogFromFileAction)).subscribe((a: LoadLogFromFileAction) => {
             this.loadLogFromFile(a.file);
         });
 
+        // Filter when someone fires a filter action
+        this.actions$
+            .pipe(filter(a => a instanceof FilterEventsAction), withLatestFrom(this.state$))
+            .subscribe(([a, s]: [FilterEventsAction, State]) => {
+            const r = filterEvents(s.records, a.f, this);
+            this.actions$.next(new FilterEventsFinishedAction(r, a.f));
+        });
+
+        // Filter when a log finishes loading
+        this.actions$
+            .pipe(filter(a => a instanceof FinishedLoadingAction), withLatestFrom(this.state$))
+            .subscribe(([a, s]: [FinishedLoadingAction, State]) => {
+            const r = filterEvents(s.records, s.filter, this);
+            this.actions$.next(new FilterEventsFinishedAction(r, s.filter));
+        });
+
+        // Whenever tags change, update text fields
         this.dbService.tagsByPriority$.pipe(withLatestFrom(this.state$)).subscribe(([t, s]) => {
             if (s.records.length > 0 && !s.loading) {
                 this.updateTextProperties(t);
             }
         });
 
+        // If tags changed while we were loading, update text fields when finished loading
         this.actions$.pipe(
             filter(a => a instanceof FinishedLoadingAction),
             withLatestFrom(this.dbService.tagsByPriority$)
@@ -76,7 +99,9 @@ export class EventLogService {
     }
 
     getTemplate(r: EventRecord) {
-        return this.messageCache[r.ProviderName][r.Id][r.LogName].Template;
+        const cachedEvent = this.messageCache[r.ProviderName][r.Id][r.LogName];
+        if (cachedEvent) { return cachedEvent.Template; }
+        return null;
     }
 
     loadActiveLog(logName: string, serverName: string) {
@@ -298,7 +323,7 @@ export interface EventFilter {
     sources: Set<string>;
     tasks: Set<string>;
     levels: Set<string>;
-    description: string;
+    description: { text: string, negate: boolean, includeXml: boolean };
 }
 
 // Sort for sorting events
@@ -334,6 +359,12 @@ export class FilterEventsAction {
     type = 'FILTER_EVENTS';
 
     constructor(public f: EventFilter) { }
+}
+
+export class FilterEventsFinishedAction {
+    type = 'FILTER_EVENTS_FINISHED';
+
+    constructor(public filteredRecords: EventRecord[], public f: EventFilter) { }
 }
 
 export class FinishedLoadingAction {
@@ -381,6 +412,7 @@ export type Action =
     ClearEventsAction |
     EventsLoadedAction |
     FilterEventsAction |
+    FilterEventsFinishedAction |
     FinishedLoadingAction |
     FocusEventAction |
     LoadActiveLogAction |
@@ -429,7 +461,21 @@ const reducer = (state: State, action: Action): State => {
                 loading: state.loading,
                 name: state.name,
                 records: state.records,
-                recordsFiltered: filterEvents(state.records, thisAction.f),
+                recordsFiltered: state.recordsFiltered,
+                focusedEvent: state.focusedEvent,
+                selectedEvents: state.selectedEvents,
+                filter: thisAction.f,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
+            };
+        }
+        case 'FILTER_EVENTS_FINISHED': {
+            const thisAction = action as FilterEventsFinishedAction;
+            return {
+                loading: state.loading,
+                name: state.name,
+                records: state.records,
+                recordsFiltered: thisAction.filteredRecords,
                 focusedEvent: state.focusedEvent,
                 selectedEvents: state.selectedEvents,
                 filter: thisAction.f,
@@ -458,7 +504,7 @@ const reducer = (state: State, action: Action): State => {
                 loading: false,
                 name: state.name,
                 records: records,
-                recordsFiltered: filterEvents(records, state.filter),
+                recordsFiltered: records,
                 focusedEvent: state.focusedEvent,
                 selectedEvents: state.selectedEvents,
                 filter: state.filter,
@@ -565,20 +611,60 @@ const reducer = (state: State, action: Action): State => {
     }
 };
 
-const filterEvents = (r: EventRecord[], f: EventFilter) => {
+const filterEvents = (r: EventRecord[], f: EventFilter, s: EventLogService) => {
     if (!f) { return r; }
-    const func = getFilterFunction(f);
+    const func = getFilterFunction(f, s);
     return r.filter(func);
 };
 
-export const getFilterFunction = (f: EventFilter) => {
+export const getEventXml = (r: EventRecord, s: EventLogService) => {
+    if (!r) { return ''; }
+
+    let xml = `<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">\r\n` +
+        `  <System>\r\n` +
+        `    <Provider Name="${r.ProviderName}" />\r\n` +
+        `    <EventID` + (r.Qualifiers ? ` Qualifiers="${r.Qualifiers}"` : ``) + `>${r.Id}</EventID>\r\n` +
+        `    <Level>${r.Level}</Level>\r\n` +
+        `    <Task>${r.Task}</Task>\r\n` +
+        `    <Keywords>${r.Keywords ? r.Keywords.toString(16) : '0x0'}</Keywords>\r\n` +
+        `    <TimeCreated SystemTime="${new Date(r.TimeCreated).toISOString()}" />\r\n` +
+        `    <EventRecordID>${r.RecordId}</EventRecordID>\r\n` +
+        `    <Channel>${r.LogName}</Channel>\r\n` +
+        `    <Computer>${r.MachineName}</Computer>\r\n` +
+        `  </System>\r\n` +
+        `  <EventData>\r\n`;
+
+    const template = s.getTemplate(r);
+    if (template) {
+        let index = -1;
+        let propIndex = 0;
+        while (-1 < (index = template.indexOf('name=', index + 1))) {
+            if (-1 < index) {
+                const nameStart = index + 6;
+                const nameEnd = template.indexOf('"', nameStart);
+                const name = template.slice(nameStart, nameEnd);
+                xml += `    <${name}>${r.Properties[propIndex]}</${name}>\r\n`;
+                propIndex++;
+            }
+        }
+    } else {
+        xml += r.Properties.map(p => `    <Data>${p}</Data>`).join('\r\n') + '\r\n';
+    }
+
+    xml += `  </EventData>\r\n` +
+        `</Event>`;
+
+    return xml;
+};
+
+export const getFilterFunction = (f: EventFilter, s: EventLogService) => {
     let regex: RegExp = null;
     if (f.description) {
-        if (f.description.startsWith('/')) {
-            const lastSlash = f.description.lastIndexOf('/');
+        if (f.description.text.startsWith('/')) {
+            const lastSlash = f.description.text.lastIndexOf('/');
             if (lastSlash > -1) {
-                const exp = f.description.substring(1, lastSlash);
-                const flags = f.description.substring(lastSlash + 1);
+                const exp = f.description.text.substring(1, lastSlash);
+                const flags = f.description.text.substring(lastSlash + 1);
                 regex = new RegExp(exp, flags);
             }
         }
@@ -587,17 +673,28 @@ export const getFilterFunction = (f: EventFilter) => {
             // If still null, then we couldn't parse it as a regex, so just match anything
             // that contains this string, ignoring case. To do that, escape any regex symbols.
             // See https://stackoverflow.com/questions/3446170/escape-string-for-use-in-javascript-regex
-            const escapedRegexString = f.description.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const escapedRegexString = f.description.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             regex = new RegExp(escapedRegexString, 'i');
         }
     }
-    const func = (record) => {
+    const func = (record: EventRecord) => {
         if (f.ids && !f.ids.has(record.Id)) { return false; }
         if (f.sources && !f.sources.has(record.ProviderName)) { return false; }
         if (f.tasks && !f.tasks.has(record.TaskName)) { return false; }
         if (f.levels && !f.levels.has(record.LevelName)) { return false; }
         if (f.description) {
-            return regex.test(record.Description);
+            const descriptionMatch = regex.test(record.Description);
+            let xmlMatch = false;
+            if (f.description.includeXml) {
+                if (record.Xml === undefined) {
+                    record.Xml = getEventXml(record, s);
+                }
+
+                xmlMatch = regex.test(record.Xml);
+            }
+
+            const result = descriptionMatch || xmlMatch;
+            return f.description.negate ? !result : result;
         }
 
         return true;

@@ -94,7 +94,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   findNext(filterString: string) {
     const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
     this.addToRecentFilters(filter, false);
-    const func = getFilterFunction(filter);
+    const func = getFilterFunction(filter, this.eventLogService);
     this.eventLogService.state$.pipe(take(1)).subscribe(s => {
       const startIndex = s.focusedEvent ? s.recordsFiltered.indexOf(s.focusedEvent) + 1 : 0;
       for (let i = startIndex; i < s.recordsFiltered.length; i++) {
@@ -109,7 +109,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   findPrevious(filterString: string) {
     const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
     this.addToRecentFilters(filter, false);
-    const func = getFilterFunction(filter);
+    const func = getFilterFunction(filter, this.eventLogService);
     this.eventLogService.state$.pipe(take(1)).subscribe(s => {
       const startIndex = s.focusedEvent ? s.recordsFiltered.indexOf(s.focusedEvent) - 1 : 0;
       for (let i = startIndex; i >= 0; i--) {
@@ -146,7 +146,11 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       sources: providerFilter,
       tasks: taskFilter,
       levels: levelFilter,
-      description: this.description.controls.description.value
+      description: {
+        text: this.description.controls.Description.value,
+        negate: this.description.controls['Not match'].value,
+        includeXml: this.description.controls['Include Xml'].value
+      }
     };
 
     return filter;
@@ -186,7 +190,11 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
       this.levels = new FormGroup(levels);
 
       this.description = new FormGroup(
-        { description: new FormControl(s.filter ? s.filter.description : '') }
+        {
+          Description: new FormControl(s.filter && s.filter.description ? s.filter.description.text : ''),
+          'Not match': new FormControl(s.filter && s.filter.description ? s.filter.description.negate : false),
+          'Include Xml': new FormControl(s.filter && s.filter.description ? s.filter.description.includeXml : false)
+        }
       );
 
       this.form = new FormGroup({
@@ -210,7 +218,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
    */
   stringifyFilter(filter: EventFilter, indentation: boolean): string {
     const slimFilter = {};
-    if (filter.description) {
+    if (filter.description && filter.description.text) {
       slimFilter['description'] = filter.description;
     }
     if (filter.ids && filter.ids.size > 0) {
@@ -236,7 +244,10 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   unstringifyFilter(s: string): EventFilter {
     const strObj = JSON.parse(s);
     return {
-      description: strObj['description'] ? strObj['description'] : null,
+      description: strObj['description'] ?
+        (typeof (strObj['description']) === 'string' ?     // If it's a string then convert
+          { text: strObj['description'], negate: false } :  // from the old format
+          strObj['description']) : null,
       ids: strObj['ids'] ? new Set(strObj['ids']) : null,
       levels: strObj['levels'] ? new Set(strObj['levels']) : null,
       sources: strObj['sources'] ? new Set(strObj['sources']) : null,

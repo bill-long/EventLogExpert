@@ -3,7 +3,7 @@ import { EventRecord } from '../../providers/eventlog.models';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil, map, distinctUntilChanged, take } from 'rxjs/operators';
-import { EventLogService, State } from '../../providers/eventlog.service';
+import { EventLogService, getEventXml } from '../../providers/eventlog.service';
 import { ElectronService } from '../../providers/electron.service';
 
 @Component({
@@ -35,19 +35,19 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
     this.scrollTop = 0;
     this.focusedEvent$ = eventLogService.state$.pipe(map(s => s.focusedEvent), distinctUntilChanged(), takeUntil(this.ngUnsubscribe));
     this.description$ = this.focusedEvent$.pipe(map(e => this.getDescriptionHtml(e)));
-    this.eventXml$ = this.focusedEvent$.pipe(map(e => this.getEventXml(e)));
+    this.eventXml$ = this.focusedEvent$.pipe(map(e => getEventXml(e, eventLogService)));
   }
 
   copyToClipboard(includeXml: boolean) {
     this.eventLogService.state$.pipe(take(1)).subscribe(s => {
       if (s.selectedEvents.length > 1) {
         const eventTexts = s.selectedEvents.map(e => this.getDescriptionText(e) +
-          (includeXml ? '\r\n' + this.getEventXml(e) : ''));
+          (includeXml ? '\r\n' + getEventXml(e, this.eventLogService) : ''));
         this.electronService.clipboard.writeText(eventTexts.join('\r\n\r\n'));
       } else {
         this.electronService.clipboard.writeText(
           this.getDescriptionText(s.focusedEvent) +
-          (includeXml ? '\r\n' + this.getEventXml(s.focusedEvent) : '')
+          (includeXml ? '\r\n' + getEventXml(s.focusedEvent, this.eventLogService) : '')
         );
       }
     });
@@ -69,46 +69,6 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
       `Computer:      ${r.MachineName}\r\n` +
       `Description:\r\n` +
       `${r.Description.replace(/%n/g, '\r\n')}`;
-  }
-
-  getEventXml(r: EventRecord) {
-    if (!r) { return ''; }
-
-    let xml = `<Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event">\r\n` +
-      `  <System>\r\n` +
-      `    <Provider Name="${r.ProviderName}" />\r\n` +
-      `    <EventID` + (r.Qualifiers ? ` Qualifiers="${r.Qualifiers}"` : ``) + `>${r.Id}</EventID>\r\n` +
-      `    <Level>${r.Level}</Level>\r\n` +
-      `    <Task>${r.Task}</Task>\r\n` +
-      `    <Keywords>${r.Keywords ? r.Keywords.toString(16) : '0x0'}</Keywords>\r\n` +
-      `    <TimeCreated SystemTime="${new Date(r.TimeCreated).toISOString()}" />\r\n` +
-      `    <EventRecordID>${r.RecordId}</EventRecordID>\r\n` +
-      `    <Channel>${r.LogName}</Channel>\r\n` +
-      `    <Computer>${r.MachineName}</Computer>\r\n` +
-      `  </System>\r\n` +
-      `  <EventData>\r\n`;
-
-    const template = this.eventLogService.getTemplate(r);
-    if (template) {
-      let index = -1;
-      let propIndex = 0;
-      while (-1 < (index = template.indexOf('name=', index + 1))) {
-        if (-1 < index) {
-          const nameStart = index + 6;
-          const nameEnd = template.indexOf('"', nameStart);
-          const name = template.slice(nameStart, nameEnd);
-          xml += `    <${name}>${r.Properties[propIndex]}</${name}>\r\n`;
-          propIndex++;
-        }
-      }
-    } else {
-      xml += r.Properties.map(p => `    <Data>${p}</Data>`).join('\r\n') + '\r\n';
-    }
-
-    xml += `  </EventData>\r\n` +
-      `</Event>`;
-
-    return xml;
   }
 
   ngAfterViewInit() {

@@ -11,7 +11,7 @@ export class FilterComponent implements OnInit {
   @Input() title: string;
   @Input() form: FormGroup;
   @Input() filter: Set<any>;
-  @Input() controlType: string;
+  @Input() controlType: string | string[];
   lastWheelMove: number;
   scrollTop = 0;
   anyNotSelected: boolean;
@@ -20,6 +20,14 @@ export class FilterComponent implements OnInit {
 
   getControlNames() {
     return Object.getOwnPropertyNames(this.form.controls);
+  }
+
+  getControlType(i: number) {
+    if (this.controlType instanceof Array) {
+      return this.controlType[i];
+    } else {
+      return this.controlType;
+    }
   }
 
   ngOnInit() {
