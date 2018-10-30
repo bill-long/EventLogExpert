@@ -1,0 +1,49 @@
+.outer-container {
+    display: flex;
+    flex: 1;
+    height: 100%;
+}
+
+.top-section {
+    display: flex;
+    flex-direction: row;
+}
+
+.event-properties {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 100px 250px 100px 250px;
+    margin-bottom: 5px;
+}
+
+.event-detail {
+    padding: 10px 0px 0px 10px;
+    width: calc(100% - 10px);
+    overflow: hidden;
+}
+
+.button {
+    height: 45px;
+    width: 100px;
+    margin-right: 15px;
+}
+
+.tabs {
+    display: flex;
+    flex-direction: row;
+}
+
+.tab {
+    border: 1px solid white;
+    padding: 5px;
+}
+
+.tab.selected {
+    border-bottom: 0;
+}
+
+.tab-spacer {
+    border-bottom: 1px solid white;
+    height: 100%;
+    width: 5px;
+}

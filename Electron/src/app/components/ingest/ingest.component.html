@@ -1,0 +1,86 @@
+<div class="flex-column-container">
+
+  <div class="tabs-container">
+    <div class="tab" [ngClass]="{ active: activeTab === 'importFromMachine' }" (click)="setActiveTab('importFromMachine')">
+      <div class="tab-title">Import From Machine</div>
+    </div>
+    <div class="tab" [ngClass]="{ active: activeTab === 'importFromFile' }" (click)="setActiveTab('importFromFile')">
+      <div class="tab-title">Import From File</div>
+    </div>
+    <div class="tab" [ngClass]="{ active: activeTab === 'exportFromMachine' }" (click)="setActiveTab('exportFromMachine')">
+      <div class="tab-title">Export From Machine</div>
+    </div>
+    <div class="tab" [ngClass]="{ active: activeTab === 'exportFromEventLogExpert' }" (click)="setActiveTab('exportFromEventLogExpert')">
+      <div class="tab-title">Export From EventLogExpert</div>
+    </div>
+  </div>
+  <div class="tab-content-container">
+    <div class="tab-content" [ngClass]="{ active: activeTab === 'importFromMachine' }">
+      <div class="control-container">
+        <label for="importServerName">Server Name</label>
+        <input id="importServerName" [(ngModel)]="importServerName">
+        <button (click)="getProvidersFromMachine(importServerName)" [disabled]="running || !importServerName">Get Providers</button>
+      </div>
+      <div class="control-container" *ngIf="providerNames">
+        <label for="importServerTag">Tag For This Import</label>
+        <input id="importServerTag" [(ngModel)]="importServerTag">
+        <button (click)="importSelectedProviders(importServerName, importServerTag)" [disabled]="running || !importServerName || !importServerTag">Import</button>
+      </div>
+    </div>
+
+    <div class="tab-content" [ngClass]="{ active: activeTab === 'importFromFile' }">
+      <div class="control-container">
+        <label for="importFileName">File</label>
+        <input id="importFileName" [(ngModel)]="importFileName" (click)="selectImportFile()" readonly>
+        <button (click)="getTagsFromFile(importFileName)" [disabled]="running || !importFileName">Get Tags</button>
+        <button *ngIf="tagNames" (click)="importSelectedTagsFromFile(importFileName, tagNames)" [disabled]="running || !importFileName || !tagNames">Import</button>
+      </div>
+    </div>
+
+    <div class="tab-content" [ngClass]="{ active: activeTab === 'exportFromMachine' }">
+      <div class="control-container">
+        <label for="exportServerName">Server Name</label>
+        <input id="exportServerName" [(ngModel)]="exportServerName">
+        <button (click)="getProvidersFromMachine(exportServerName)" [disabled]="running || !exportServerName">Get Providers</button>
+      </div>
+      <div class="control-container" *ngIf="providerNames">
+        <label for="exportTag">Tag</label>
+        <input id="exportTag" [(ngModel)]="exportTag">
+      </div>
+      <div class="control-container" *ngIf="exportTag">
+        <label for="exportFileName">Export File</label>
+        <input id="exportFileName" [(ngModel)]="exportFileName" (click)="selectExportFile()" readonly>
+        <button (click)="exportSelectedProviders(exportServerName, exportFileName, exportTag)" [disabled]="running || !exportServerName || !exportFileName || !providerNames">Export</button>
+      </div>
+    </div>
+
+    <div class="tab-content" [ngClass]="{ active: activeTab === 'exportFromEventLogExpert' }">
+      <div class="control-container">
+        <label for="exportFileName">Export File</label>
+        <input id="exportFileName" [(ngModel)]="exportFileName" (click)="selectExportFile()" readonly>
+        <button (click)="exportLocalDatabase(exportFileName)" [disabled]="running || !exportFileName">Export</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="button-area" *ngIf="checkboxNames">
+    <button *ngIf="allSelected" (click)="deselectAll()">Deselect All</button>
+    <button *ngIf="!allSelected" (click)="selectAll()">Select All</button>
+  </div>
+  <div class="scrollable-area">
+    <div #providersDiv class="providers-container" [formGroup]="form" [scrollTop]="scrollTop" (wheel)="onWheel($event, providersDiv)">
+      <div *ngFor="let name of checkboxNames">
+        <input type="checkbox" id="{{name}}" name="{{name}}" [formControlName]="name">
+        <label for="{{name}}">{{name}}</label>
+      </div>
+    </div>
+    <app-scrollbar [rowcount]="providersDiv.scrollHeight" [position]="scrollTop" [rowsVisible]="providersDiv.clientHeight" (updatePosition)="onScrollBar($event)">
+    </app-scrollbar>
+  </div>
+
+  <div class="status-bar">
+    <div *ngFor="let s of status">{{s}}</div>
+  </div>
+
+</div>

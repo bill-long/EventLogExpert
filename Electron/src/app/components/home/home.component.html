@@ -1,5 +1,20 @@
-<div class="container">
-  <h1 class="title">
-    {{ 'PAGES.HOME.TITLE' | translate }}
-  </h1>
+<div class="home-container" *ngIf="state$ | async as state">
+  <div class="filter-pane">
+    <div class="expander" *ngIf="!filterPaneExpanded" (click)="filterPaneExpanded = true">
+      <div class="expander-closed">»</div>
+    </div>
+    <div *ngIf="filterPaneExpanded">
+      <div class="expander" (click)="filterPaneExpanded = false">
+        <div class="expander-open">»</div>
+      </div>
+      <app-filterpane></app-filterpane>
+    </div>
+  </div>
+  <app-event-table></app-event-table>
+  <div class="detail-divider" (mousedown)="onDetailDividerMouseDown($event)"></div>
+  <app-event-detail [hidden]="!state.focusedEvent" [ngStyle]="{ 'height': detailHeight + 'px' }" [heightChange$]="detailHeightChange$"></app-event-detail>
+  <div class="status-bar">
+    <div *ngIf="state.records.length">Records: {{state.records.length}}</div>
+    <div *ngIf="state.recordsFiltered.length">Visible: {{state.recordsFiltered.length}}</div>
+  </div>
 </div>

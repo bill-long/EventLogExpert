@@ -2,6 +2,59 @@
 html, body {
   margin: 0;
   padding: 0;
-
   height: 100%;
+  background-color: #222222;
+  color: #9CDCFE;
+  // font-family: Consolas, 'Courier New', Courier, monospace
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', 'HelveticaNeue-Light', 'Ubuntu', 'Droid Sans', sans-serif;
+  font-size: 10pt;
+}
+
+// Dark theme
+.bg-dark {
+  background-color: #222222;
+}
+
+.fg1-dark {
+  color: #DCDCAA
+}
+
+.fg2-dark {
+  color: #4EC9B0
+}
+
+.fg3-dark {
+  color: #C586C0
+}
+
+.fg4-dark {
+  color: #9CDCFE
+}
+
+.fg5-dark {
+  color: #CE9178
+}
+
+button {
+  background: rgb(60, 100, 231);
+  color: white;
+  border: none;
+  padding: 5px;
+  margin: 5px;
+}
+
+button:hover {
+  background: rgb(80, 120, 231);
+}
+
+button:active {
+  background: #9CDCFE;
+}
+
+button:focus {
+  outline: none;
+}
+
+button:disabled {
+  background: grey;
 }

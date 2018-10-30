@@ -3,7 +3,7 @@ import 'reflect-metadata';
 import '../polyfills';
 import { BrowserModule } from '@angular/platform-browser';
 import { NgModule } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 
 import { HttpClientModule, HttpClient } from '@angular/common/http';
 
@@ -19,6 +19,16 @@ import { WebviewDirective } from './directives/webview.directive';
 
 import { AppComponent } from './app.component';
 import { HomeComponent } from './components/home/home.component';
+import { EventLogService } from './providers/eventlog.service';
+import { EventUtils } from './providers/eventutils.service';
+import { DatabaseService } from './providers/database.service';
+import { ScrollbarComponent } from './components/scrollbar/scrollbar.component';
+import { IngestComponent } from './components/ingest/ingest.component';
+import { EventDetailComponent } from './components/event-detail/event-detail.component';
+import { EventTableComponent } from './components/event-table/event-table.component';
+import { FilterPaneComponent } from './components/filterpane/filterpane.component';
+import { FilterComponent } from './components/filter/filter.component';
+import { TagsmodalComponent } from './components/tagsmodal/tagsmodal.component';
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -29,7 +39,14 @@ export function HttpLoaderFactory(http: HttpClient) {
   declarations: [
     AppComponent,
     HomeComponent,
-    WebviewDirective
+    WebviewDirective,
+    ScrollbarComponent,
+    IngestComponent,
+    EventDetailComponent,
+    EventTableComponent,
+    FilterPaneComponent,
+    FilterComponent,
+    TagsmodalComponent
   ],
   imports: [
     BrowserModule,
@@ -42,9 +59,10 @@ export function HttpLoaderFactory(http: HttpClient) {
         useFactory: (HttpLoaderFactory),
         deps: [HttpClient]
       }
-    })
+    }),
+    ReactiveFormsModule
   ],
-  providers: [ElectronService],
+  providers: [ElectronService, EventLogService, EventUtils, DatabaseService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

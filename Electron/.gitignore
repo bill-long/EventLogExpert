@@ -6,6 +6,9 @@
 /out-tsc
 /app-builds
 main.js
+*.dll
+*.pdb
+*.js
 
 # dependencies
 /node_modules

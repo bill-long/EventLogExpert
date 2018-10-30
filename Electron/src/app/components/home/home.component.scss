@@ -1,17 +1,62 @@
-.container {
+.home-container {
   height: 100%;
   display: flex;
+  flex-direction: column;
+  margin: 0;
+  overflow-y: hidden;
+}
+
+.filter-pane {
+  background-color: #353535;
+  user-select: none;
+}
+
+.expander {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  background-color: rgb(60, 100, 231);
+  color: white;
+  width: 100%;
+  text-align: center;
+  cursor: pointer;
+  height: 24px;
+  line-height: 24px;
+  font-weight: 500;
+  font-size: 16pt;
+}
 
-  background: url(../../../assets/background.jpg) no-repeat center fixed;
-  -webkit-background-size: cover; /* pour anciens Chrome et Safari */
-  background-size: cover; /* version standardisée */
+.expander-closed {
+  transform: rotate(90deg) scaleY(1.5);
+  width: 24px;
+}
 
-  .title {
-    color: white;
-    margin:0;
-    padding:50px 20px;
-  }
+.expander-open {
+  transform: rotate(-90deg) scaleY(1.5);
+  width: 24px;
+}
 
+app-event-table {
+  flex: 1;
+  overflow-y: hidden;
+  user-select: none;
+}
+
+.status-bar {
+  display: flex;
+  flex-direction: row;
+  height: 24px;
+  background-color: rgb(60, 100, 231);
+  color: white;
+  align-items: center;
+}
+
+.status-bar > div {
+  margin-left: 10px;
+}
+
+.detail-divider {
+  height: 5px;
+  background: black;
+  cursor: row-resize;
 }

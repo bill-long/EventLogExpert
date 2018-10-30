@@ -1,0 +1,99 @@
+.flex-column-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.tabs-container {
+    display: flex;
+    margin: 5px 0px 0px 5px;
+}
+
+.tab {
+    margin-right: 5px;
+    height: 50px;
+    width: 200px;
+    font-weight: bold;
+    background-color: #333333;
+    display: flex;
+    align-items: center;
+    cursor: default;
+}
+
+.tab-title {
+    width: 100%;
+    text-align: center;
+}
+
+.tab.active {
+    background-color: #333355
+}
+
+.tab-content {
+    display: none;
+    margin: 20px 5px 20px 5px;
+}
+
+.tab-content.active {
+    display: flex;
+}
+
+.control-container {
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+    margin-right: 10px;
+}
+
+.control-container > button {
+    width: 100%;
+    margin: 10px 0px 0px 0px;
+}
+
+.control-container > input {
+    margin-top: 5px;
+    width: calc(100% - 4px);
+}
+
+.button-area {
+    margin: 20px 5px 0px 5px;
+    display: flex;
+    flex-direction: column;
+    max-width: 300px;
+}
+
+.button-area > button {
+    width: 100%;
+    margin: 10px 0px 0px 0px;
+}
+
+.scrollable-area {
+    display: flex;
+    flex: 1;
+    height: 100%;
+}
+
+.providers-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    overflow: hidden;
+    height: 100%;
+    user-select: none;
+}
+
+.status-bar {
+    flex: 0 1 24px;
+    height: 24px;
+    display: flex;
+    flex-direction: row;
+    background-color: rgb(60, 100, 231);
+    color: white;
+    align-items: center;
+    overflow: hidden;
+  }
+  
+.status-bar > div {
+    white-space: nowrap;
+    margin-left: 10px;
+}

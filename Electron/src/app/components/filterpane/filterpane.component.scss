@@ -1,0 +1,52 @@
+.filters {
+    height: 300px;
+    display: flex;
+    box-sizing: border-box;
+}
+
+.stacked-filters {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+app-filter {
+    margin: 5px;
+}
+
+.button-div {
+    display: flex;
+    flex-direction: column;
+    width: 250px;
+    justify-content: center;
+}
+
+button {
+    height: 40px;
+    overflow: hidden;
+}
+
+.recent-filters {
+    display: flex;
+    flex-direction: column;
+    width: 500px;
+}
+
+.recent-filter {
+    display: flex;
+    align-items: center;
+}
+
+.recent-filter > input {
+    width: 250px;
+    flex: 1;
+}
+
+.recent-filter > button {
+    height: 25px;
+    width: 50px;
+}
+
+.flex-one {
+    flex: 1;
+}

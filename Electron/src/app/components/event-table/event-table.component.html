@@ -1,0 +1,41 @@
+<div class="event-table" (wheel)="onWheel($event)" *ngIf="state$ | async as state">
+  <table>
+    <thead>
+      <th nowrap [ngStyle]="{ 'width': columnWidths['Record Id'] + 'px' }">Record Id</th>
+      <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+      <th nowrap [ngStyle]="{ 'width': columnWidths['Time'] + 'px' }">Time</th>
+      <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+      <th nowrap [ngStyle]="{ 'width': columnWidths['Id'] + 'px' }">Id</th>
+      <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+      <th nowrap [ngStyle]="{ 'width': columnWidths['Machine'] + 'px' }">Machine</th>
+      <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+      <th nowrap [ngStyle]="{ 'width': columnWidths['Level'] + 'px' }">Level</th>
+      <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+      <th nowrap [ngStyle]="{ 'width': columnWidths['Source'] + 'px' }">Source</th>
+      <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+      <th nowrap [ngStyle]="{ 'width': columnWidths['Task Category'] + 'px' }">Task Category</th>
+      <th class="table-divider" (mousedown)="onMouseDown($event)"></th>
+      <th nowrap>Description</th>
+    </thead>
+    <tbody>
+      <tr *ngFor="let evt of visibleRecords$ | async as visibleRecords" (mousedown)="selectEvent(evt, $event)" [ngClass]="{'selected': state.selectedEvents.indexOf(evt) > -1 }">
+        <td>{{evt.RecordId}}</td>
+        <td class="table-divider"></td>
+        <td nowrap [ngStyle]="{ 'width': columnWidths['Time'] + 'px' }">{{evt.TimeCreatedString}}</td>
+        <td class="table-divider"></td>
+        <td>{{evt.Id}}</td>
+        <td class="table-divider"></td>
+        <td>{{evt.MachineName}}</td>
+        <td class="table-divider"></td>
+        <td>{{evt.LevelName}}</td>
+        <td class="table-divider"></td>
+        <td>{{evt.ProviderName}}</td>
+        <td class="table-divider"></td>
+        <td>{{evt.TaskName}}</td>
+        <td class="table-divider"></td>
+        <td>{{evt.Description}}</td>
+      </tr>
+    </tbody>
+  </table>
+  <app-scrollbar [rowcount]="state.recordsFiltered.length" [position]="renderOffset" [rowsVisible]="rowsInView" (updatePosition)="onScrollbar($event)"></app-scrollbar>
+</div>

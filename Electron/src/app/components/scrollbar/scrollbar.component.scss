@@ -1,0 +1,15 @@
+#scroll-bar {
+  height: 100%;
+  width: 10px;
+  color: black;
+  background-color: black;
+  position: relative;
+  overflow: hidden;
+}
+  
+#cursor {
+  background-color: gray;
+  width: 10px;
+  position: absolute;
+  left: 0px;
+}

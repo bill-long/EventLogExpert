@@ -2,8 +2,8 @@
 
   <PropertyGroup>
     <TargetFramework>net471</TargetFramework>
-    <RootNamespace>EventLogExpert.EventUtils</RootNamespace>
-    <AssemblyName>EventLogExpert.EventUtils</AssemblyName>
+    <RootNamespace>EventLogExpert</RootNamespace>
+    <AssemblyName>EventLogExpert</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,0 +1,45 @@
+.event-table {
+    display: flex;
+    height: 100%;
+}
+
+tr:nth-child(odd) {
+    background-color: #353535;
+}
+
+tr:hover {
+    background-color: black;
+}
+
+table {
+    border-spacing: 0;
+    table-layout: fixed;
+    width: calc(100% - 10px);
+}
+
+th {
+    overflow: hidden;
+    cursor: default;
+}
+
+td {
+    overflow: hidden;
+    white-space: nowrap;
+    padding-left: 5px;
+    cursor: default;
+}
+
+.table-divider {
+    background: #111111;
+    color: #111111;
+    width: 2px;
+}
+
+th.table-divider {
+    cursor: col-resize;
+}
+
+tr.selected {
+    color: black;
+    background-color: #9CDCFE;
+}

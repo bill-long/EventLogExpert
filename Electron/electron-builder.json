@@ -1,40 +1,42 @@
 {
-  "productName": "angular-electron",
+  "productName": "eventlogexpert",
   "directories": {
     "output": "app-builds"
   },
-    "files": [
-        "**/*",
-        "!*.ts",
-        "!*.code-workspace",
-        "!LICENSE.md",
-        "!package.json",
-        "!package-lock.json",
-        "!src/",
-        "!e2e/",
-        "!hooks/",
-        "!.angular-cli.json",
-        "!_config.yml",
-        "!karma.conf.js",
-        "!tsconfig.json",
-        "!tslint.json"
-    ],
+  "files": [
+    "**/*",
+    "!*.psd",
+    "!*.ts",
+    "!*.code-workspace",
+    "!LICENSE.md",
+    "!package.json",
+    "!package-lock.json",
+    "!src/",
+    "!e2e/",
+    "!hooks/",
+    "!.angular-cli.json",
+    "!_config.yml",
+    "!karma.conf.js",
+    "!tsconfig.json",
+    "!tslint.json"
+  ],
   "win": {
+    "extraResources": [
+      "./*.dll"
+    ],
     "icon": "dist",
     "target": [
-      "portable"
-    ]
-  },
-  "mac": {
-    "icon": "dist",
-    "target": [
-      "dmg"
-    ]
-  },
-  "linux": {
-    "icon": "dist",
-    "target": [
-      "AppImage"
+      "nsis"
+    ],
+    "publish": [
+      {
+        "provider": "spaces",
+        "name": "eventlogexpert",
+        "region": "nyc3",
+        "channel": "latest",
+        "path": "/",
+        "acl": "public-read"
+      }
     ]
   }
 }
