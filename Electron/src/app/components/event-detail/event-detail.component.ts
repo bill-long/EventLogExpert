@@ -61,7 +61,7 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
   getDescriptionText(r: EventRecord) {
     return `LogName:       ${r.LogName}\r\n` +
       `Source:        ${r.ProviderName}\r\n` +
-      `Date:          ${(new Date(r.TimeCreated)).toLocaleString()}\r\n` +
+      `Date:          ${r.TimeCreatedString}\r\n` +
       `Event ID:      ${r.Id}\r\n` +
       `Task Category: ${r.TaskName.trim()}\r\n` +
       `Level:         ${r.LevelName}\r\n` +
