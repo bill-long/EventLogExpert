@@ -19,6 +19,10 @@ A Windows Event Log viewer for IT professionals and power users.
 
 	https://www.microsoft.com/net/download/windows
 
+4. Install the .NET 4.7.1 Targeting Pack:
+
+	https://www.microsoft.com/en-us/download/details.aspx?id=56119
+
 ### Building and Testing
 
 1. Change into the Electron Folder run: 
