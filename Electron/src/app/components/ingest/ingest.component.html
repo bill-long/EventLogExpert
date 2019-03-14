@@ -24,7 +24,7 @@
       <div class="control-container" *ngIf="providerNames">
         <label for="importServerTag">Tag For This Import</label>
         <input id="importServerTag" [(ngModel)]="importServerTag">
-        <button (click)="importSelectedProviders(importServerName, importServerTag)" [disabled]="running || !importServerName || !importServerTag">Import</button>
+        <button (click)="importSelectedProvidersFromServer(importServerName, importServerTag)" [disabled]="running || !importServerName || !importServerTag">Import</button>
       </div>
     </div>
 

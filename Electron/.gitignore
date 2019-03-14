@@ -5,10 +5,15 @@
 /tmp
 /out-tsc
 /app-builds
+/release
 main.js
+eventlogexpert.menu.js
+eventlogexpert.windowmanager.js
+src/**/*.js
+!src/karma.conf.js
+*.js.map
 *.dll
 *.pdb
-*.js
 
 # dependencies
 /node_modules

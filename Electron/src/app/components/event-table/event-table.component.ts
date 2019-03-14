@@ -61,9 +61,9 @@ export class EventTableComponent implements AfterViewInit, OnInit {
             let newRenderOffset = this.renderOffset;
             if (w && (this.lastWheelMove === null || this.lastWheelMove !== w.timeStamp)) {
               this.lastWheelMove = w.timeStamp;
-              if (w.wheelDeltaY < 0 && this.renderOffset + this.rowsInView < s.recordsFiltered.length) {
+              if (w.deltaY > 0 && this.renderOffset + this.rowsInView < s.recordsFiltered.length) {
                 newRenderOffset += 5;
-              } else if (w.wheelDeltaY > 0 && this.renderOffset > 0) {
+              } else if (w.deltaY < 0 && this.renderOffset > 0) {
                 newRenderOffset -= 5;
               }
             }
