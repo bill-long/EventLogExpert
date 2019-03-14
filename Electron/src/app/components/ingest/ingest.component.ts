@@ -21,6 +21,7 @@ export class IngestComponent implements OnInit {
   providerNames: string[];
   checkboxNames: string[];
   running: boolean;
+  importServerTag: string;
   importFileName: string;
   exportFileName: string;
   importServerName: string;
@@ -264,11 +265,11 @@ export class IngestComponent implements OnInit {
   onWheel(w: WheelEvent, div: HTMLElement) {
     if (w && (this.lastWheelMove === null || this.lastWheelMove !== w.timeStamp)) {
       this.lastWheelMove = w.timeStamp;
-      if (w.wheelDeltaY < 0) {
+      if (w.deltaY > 0) {
         if (div.clientHeight + this.scrollTop < div.scrollHeight) {
           this.scrollTop += 100;
         }
-      } else if (w.wheelDeltaY > 0 && this.scrollTop > 0) {
+      } else if (w.deltaY < 0) {
         this.scrollTop -= 100;
         if (this.scrollTop < 0) {
           this.scrollTop = 0;
