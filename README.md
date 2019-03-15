@@ -10,18 +10,18 @@ A Windows Event Log viewer for IT professionals and power users.
 
 ### Prerequisites
 
-1. Install Angular Cli 6+:
+1. Install Angular Cli 7+:
 
 	`npm install -g @angular/cli`
 
-2. Install Node.js Version 8+
+2. Install Node.js Version 10+
 3. Install the Dotnet Core 2.1 SDK:
 
 	https://www.microsoft.com/net/download/windows
 
-4. Install the .NET 4.7.1 Targeting Pack:
+4. Install the .NET 4.7.2 Developer Pack:
 
-	https://www.microsoft.com/en-us/download/details.aspx?id=56119
+	https://dotnet.microsoft.com/download/dotnet-framework/net472
 
 ### Building and Testing
 
