@@ -31,12 +31,22 @@ export class IngestComponent implements OnInit {
   lastWheelMove: number;
   activeTab: string;
   scrollTop = 0;
+  addMessagesFunc: (items: any[]) => Promise<void>;
+  addEventsFunc: (items: any[]) => Promise<void>;
+  addKeywordsFunc: (items: any[]) => Promise<void>;
+  addOpcodesFunc: (items: any[]) => Promise<void>;
+  addTasksFunc: (items: any[]) => Promise<void>;
 
   constructor(
     private eventutils: EventUtils,
     private dbService: DatabaseService,
     private electronService: ElectronService,
     private ngZone: NgZone) {
+    this.addMessagesFunc = async (items: Message[]) => await this.dbService.addMessages(items);
+    this.addEventsFunc = async (items: ProviderEvent[]) => await this.dbService.addEvents(items);
+    this.addKeywordsFunc = async (items: ProviderValueName[]) => await this.dbService.addKeywords(items);
+    this.addOpcodesFunc = async (items: ProviderValueName[]) => await this.dbService.addOpcodes(items);
+    this.addTasksFunc = async (items: ProviderValueName[]) => await this.dbService.addTasks(items);
   }
 
   ngOnInit() {
@@ -59,7 +69,7 @@ export class IngestComponent implements OnInit {
     this.dbService.getAllMessages$().subscribe(async m => {
       count += m.length;
       this.status[1] = `${count}`;
-      await this.writeMessagesToFile(m, fileName);
+      await this.writeObjectToFile(m, fileName);
     },
       err => this.status[2] = `${err}`,
       () => this.status[3] = 'Done!');
@@ -71,14 +81,13 @@ export class IngestComponent implements OnInit {
     this.status = [];
 
     const selectedProviderNames = this.providerNames.filter(n => this.form.controls[n].value);
-    this.status.push(`Providers: ${selectedProviderNames.length} `);
+    this.status.push(`Providers: 0/${selectedProviderNames.length} `);
 
-    let messageCount = 0;
-    let messages = [];
-    this.status[1] = `Messages: ${messageCount}`;
+    let providerCount = 0;
+    let errorCount = 0;
     for (let i = 0; i < selectedProviderNames.length; i++) {
       this.status[2] = `Loading data for ${selectedProviderNames[i]}`;
-      const results = await new Promise<any[]>(resolve => {
+      const results = await new Promise<ProviderDetails>(resolve => {
         this.eventutils.loadProviderDetails({
           serverName: serverName,
           providerName: selectedProviderNames[i],
@@ -86,35 +95,34 @@ export class IngestComponent implements OnInit {
         }, (err, r) => { resolve(r); });
       });
 
-      if (results && results.length > 0) {
-        messageCount += results.length;
-        this.status[1] = `Messages: ${messageCount}`;
-        results.forEach(m => m.Tag = tag);
-        messages = messages.concat(results);
+      if (results) {
+        if ((results as any).Result instanceof Error) {
+          this.status[0] = `Providers: ${providerCount += 1}/${selectedProviderNames.length}`;
+          this.status[1] = `Errors: ${errorCount += 1}`;
+          console.error(`Failed to load provider ${selectedProviderNames[i]}`, results);
+        } else {
+          (results as any).Tag = tag;
+          this.status[0] = `Providers: ${providerCount += 1}/${selectedProviderNames.length}`;
+          this.status[2] = 'Writing provider details to file...';
+          await this.writeObjectToFile(results, fileName);
+        }
       }
-    }
-
-    this.status[2] = 'Writing messages...';
-    for (let i = 0; i < messages.length; i += 1000) {
-      this.ngZone.run(() => this.status[3] = i.toString());
-      await this.writeMessagesToFile(messages.slice(i, i + 1000), fileName);
     }
 
     this.ngZone.run(() => this.status[3] = 'Done!');
     this.running = false;
   }
 
-  getMessagesFromFile(filename: string): Observable<any[]> {
+  getObjectsFromFile(filename: string): Observable<any[]> {
     return new Observable(o => {
-      const maxBuffer = 1000;
+      const maxBuffer = 1;
       let buffer = [];
       const readStream = this.electronService.fs.createReadStream(filename);
       const lineReader = this.electronService.readline.createInterface(readStream);
       lineReader.on('line', (line: string) => {
-        console.log(line);
-        if (line.startsWith(',')) {
+        /* if (line.startsWith(',')) {
           line = line.substr(1);
-        }
+        } */
 
         buffer.push(JSON.parse(line));
         if (buffer.length === maxBuffer) {
@@ -155,11 +163,11 @@ export class IngestComponent implements OnInit {
     this.status = ['Reading file...'];
     let tagsInFile = [];
     let count = 0;
-    this.getMessagesFromFile(filename).subscribe(messagesInFile => {
+    this.getObjectsFromFile(filename).subscribe(objectsInFile => {
       this.ngZone.run(() => {
-        count += messagesInFile.length;
-        this.status[1] = `Messages: ${count}`;
-        const tags = Array.from(new Set(messagesInFile.map(m => m.Tag)));
+        count += objectsInFile.length;
+        this.status[1] = `Providers: ${count}`;
+        const tags = Array.from(new Set(objectsInFile.map(m => m.Tag)));
         tagsInFile = Array.from(new Set([...tagsInFile, ...tags])).sort();
       });
     },
@@ -193,15 +201,8 @@ export class IngestComponent implements OnInit {
     const selectedProviderNames = this.providerNames.filter(n => this.form.controls[n].value);
     this.status.push(`Providers: ${selectedProviderNames.length} `);
 
-    let messageCount = 0;
-    this.status[1] = `Messages: ${messageCount}`;
-    let progressFunc = (count: number) => this.status[1] = `Messages: ${messageCount += count}`;
-    let addMessagesFunc = async (items: Message[]) => await this.dbService.addMessages(items);
-    let addEventsFunc = async (items: ProviderEvent[]) => await this.dbService.addEvents(items);
-    let addKeywordsFunc = async (items: ProviderValueName[]) => await this.dbService.addKeywords(items);
-    let addOpcodesFunc = async (items: ProviderValueName[]) => await this.dbService.addOpcodes(items);
-    let addTasksFunc = async (items: ProviderValueName[]) => await this.dbService.addTasks(items);
-    let logFunc = isDevMode() ? null : null;
+    let providerCount = 0;
+    this.status[1] = `Providers: ${providerCount}`;
 
     for (let i = 0; i < selectedProviderNames.length; i++) {
       this.status[2] = `Loading data for ${selectedProviderNames[i]}`;
@@ -209,7 +210,7 @@ export class IngestComponent implements OnInit {
         this.eventutils.loadProviderDetails({
           serverName: serverName,
           providerName: selectedProviderNames[i],
-          logFunc: logFunc
+          logFunc: null
         }, (err, r) => {
           if (err) {
             console.log(`Error loading provider data for ${selectedProviderNames[i]}`, err);
@@ -223,13 +224,7 @@ export class IngestComponent implements OnInit {
         });
       });
 
-      if (results) {
-        await this.addItemsToDatabase(results.ProviderName, tag, results.Messages, progressFunc, addMessagesFunc);
-        await this.addItemsToDatabase(results.ProviderName, tag, results.Events, progressFunc, addEventsFunc);
-        await this.addItemsToDatabase(results.ProviderName, tag, results.Keywords, progressFunc, addKeywordsFunc);
-        await this.addItemsToDatabase(results.ProviderName, tag, results.Opcodes, progressFunc, addOpcodesFunc);
-        await this.addItemsToDatabase(results.ProviderName, tag, results.Tasks, progressFunc, addTasksFunc);
-      }
+      this.addProviderDetailsToDatabase(results, tag);
     }
 
     this.status.push('Done!');
@@ -237,10 +232,22 @@ export class IngestComponent implements OnInit {
 
   }
 
-  private async addItemsToDatabase(providerName: string, tag: string, items: any[], progress: (count: number) => void, add: (items: any[]) => Promise<void>) {
+  private async addProviderDetailsToDatabase(providerDetails: ProviderDetails, tag: string) {
+    if (providerDetails) {
+      if (!(this.dbService.tagsCache.find(t => t.toUpperCase() === tag.toUpperCase()))) {
+        this.dbService.addTag({ name: tag });
+      }
+      await this.addItemsToDatabase(providerDetails.ProviderName, tag, providerDetails.Messages, this.addMessagesFunc);
+      await this.addItemsToDatabase(providerDetails.ProviderName, tag, providerDetails.Events, this.addEventsFunc);
+      await this.addItemsToDatabase(providerDetails.ProviderName, tag, providerDetails.Keywords, this.addKeywordsFunc);
+      await this.addItemsToDatabase(providerDetails.ProviderName, tag, providerDetails.Opcodes, this.addOpcodesFunc);
+      await this.addItemsToDatabase(providerDetails.ProviderName, tag, providerDetails.Tasks, this.addTasksFunc);
+    }
+  }
+
+  private async addItemsToDatabase(providerName: string, tag: string, items: any[], add: (items: any[]) => Promise<void>) {
     if (items && items.length > 0) {
       items.forEach(i => { i.ProviderName = providerName.toUpperCase(); i.Tag = tag; })
-      progress(items.length);
       await add(items);
     }
   }
@@ -263,19 +270,21 @@ export class IngestComponent implements OnInit {
     this.status = ['Reading file...'];
     let total = 0;
     let matching = 0;
-    this.getMessagesFromFile(filename).subscribe(async messagesInFile => {
-      const messagesMatchingTag = messagesInFile.filter(m => tagSet.has(m.Tag));
-      total += messagesInFile.length;
-      matching += messagesMatchingTag.length;
+    this.getObjectsFromFile(filename).subscribe(async providersInFile => {
+      const providersMatchingTag = providersInFile.filter(m => tagSet.has(m.Tag));
+      total += providersInFile.length;
+      matching += providersMatchingTag.length;
       this.ngZone.run(async () => {
-        this.status[1] = `${total} total messages`;
-        this.status[2] = `${matching} messages for selected tags`;
+        this.status[1] = `${total} total providers`;
+        this.status[2] = `${matching} providers for selected tags`;
       });
-      try {
-        const addedCount = await this.dbService.addMessages(messagesMatchingTag);
-      } catch (e) {
-        this.ngZone.run(() => this.status[3] = e);
-      }
+      providersMatchingTag.forEach(async p => {
+        try {
+          await this.addProviderDetailsToDatabase(p, p.Tag);
+        } catch (e) {
+          this.ngZone.run(() => this.status[3] = e);
+        }
+      });
     },
       err => this.ngZone.run(() => this.status[3] = err),
       () => {
@@ -351,8 +360,8 @@ export class IngestComponent implements OnInit {
     controlNames.forEach(c => this.form.controls[c].setValue(true));
   }
 
-  private async writeMessagesToFile(m: any[], fileName: string) {
-    const writeString = m.map(msg => JSON.stringify(msg)).join('\n') + '\n';
+  private async writeObjectToFile(m, fileName: string) {
+    const writeString = JSON.stringify(m) + '\n';
     await this.electronService.fs.appendFile(fileName, writeString, err => {
       if (err) {
         throw new Error(err.toString());

@@ -103,6 +103,13 @@ namespace EventLogExpert
                         blockPtr = IntPtr.Add(blockPtr, blockSize);
                     }
                 }
+                catch (Exception ex)
+                {
+                    // Hide the failure. We want to allow the results from the modern provider
+                    // to return even if we failed to load the legacy provider.
+                    _traceAction($"Failed to load legacy provider data for {_providerName}.");
+                    _traceAction(ex.ToString());
+                }
                 finally
                 {
                     if (hModule != IntPtr.Zero)
