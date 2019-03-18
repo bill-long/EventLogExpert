@@ -1,9 +1,9 @@
-import { Component, OnInit, ViewEncapsulation, NgZone } from '@angular/core';
-import { EventUtils } from '../../providers/eventutils.service';
+import { Component, OnInit, ViewEncapsulation, NgZone, isDevMode } from '@angular/core';
+import { EventUtils, ProviderDetails } from '../../providers/eventutils.service';
 import { DatabaseService } from '../../providers/database.service';
 import { ElectronService } from '../../providers/electron.service';
 import { FormGroup, AbstractControl, FormControl } from '@angular/forms';
-import { Message } from '../../providers/database.models';
+import { Message, ProviderEvent, ProviderValueName } from '../../providers/database.models';
 import { Observable } from 'rxjs';
 
 @Component({
@@ -79,7 +79,7 @@ export class IngestComponent implements OnInit {
     for (let i = 0; i < selectedProviderNames.length; i++) {
       this.status[2] = `Loading data for ${selectedProviderNames[i]}`;
       const results = await new Promise<any[]>(resolve => {
-        this.eventutils.loadProviderMessages({
+        this.eventutils.loadProviderDetails({
           serverName: serverName,
           providerName: selectedProviderNames[i],
           logFunc: s => { } // Logging causes the dev tools to crash for some reason
@@ -184,6 +184,8 @@ export class IngestComponent implements OnInit {
       this.status = ['Tag already exists. Please enter a new tag name.'];
       this.running = false;
       return;
+    } else {
+      await this.dbService.addTag({ name: tag });
     }
 
     this.status = [];
@@ -192,32 +194,55 @@ export class IngestComponent implements OnInit {
     this.status.push(`Providers: ${selectedProviderNames.length} `);
 
     let messageCount = 0;
-    let savedCount = 0;
     this.status[1] = `Messages: ${messageCount}`;
+    let progressFunc = (count: number) => this.status[1] = `Messages: ${messageCount += count}`;
+    let addMessagesFunc = async (items: Message[]) => await this.dbService.addMessages(items);
+    let addEventsFunc = async (items: ProviderEvent[]) => await this.dbService.addEvents(items);
+    let addKeywordsFunc = async (items: ProviderValueName[]) => await this.dbService.addKeywords(items);
+    let addOpcodesFunc = async (items: ProviderValueName[]) => await this.dbService.addOpcodes(items);
+    let addTasksFunc = async (items: ProviderValueName[]) => await this.dbService.addTasks(items);
+    let logFunc = isDevMode() ? null : null;
+
     for (let i = 0; i < selectedProviderNames.length; i++) {
       this.status[2] = `Loading data for ${selectedProviderNames[i]}`;
-      const results = await new Promise<any[]>(resolve => {
-        this.eventutils.loadProviderMessages({
+      const results = await new Promise<ProviderDetails>(resolve => {
+        this.eventutils.loadProviderDetails({
           serverName: serverName,
           providerName: selectedProviderNames[i],
-          logFunc: s => { } // Logging causes the dev tools to crash for some reason
-        }, (err, r) => { resolve(r); });
+          logFunc: logFunc
+        }, (err, r) => {
+          if (err) {
+            console.log(`Error loading provider data for ${selectedProviderNames[i]}`, err);
+            resolve(null);
+          } else if (r.Result instanceof Error) {
+            console.log(`Error loading provider data for ${selectedProviderNames[i]}`, r.Result);
+            resolve(null);
+          } else {
+            resolve(r);
+          }
+        });
       });
 
-      if (results && results.length > 0) {
-        messageCount += results.length;
-        this.status[1] = `Messages: ${messageCount}`;
-        results.forEach(m => m.Tag = tag);
-        const r = await this.dbService.addMessages(results, s => this.status[2] = s);
-        savedCount += r;
+      if (results) {
+        await this.addItemsToDatabase(results.ProviderName, tag, results.Messages, progressFunc, addMessagesFunc);
+        await this.addItemsToDatabase(results.ProviderName, tag, results.Events, progressFunc, addEventsFunc);
+        await this.addItemsToDatabase(results.ProviderName, tag, results.Keywords, progressFunc, addKeywordsFunc);
+        await this.addItemsToDatabase(results.ProviderName, tag, results.Opcodes, progressFunc, addOpcodesFunc);
+        await this.addItemsToDatabase(results.ProviderName, tag, results.Tasks, progressFunc, addTasksFunc);
       }
-
-      this.status[2] = `Saved ${savedCount}`;
     }
 
     this.status.push('Done!');
     this.running = false;
 
+  }
+
+  private async addItemsToDatabase(providerName: string, tag: string, items: any[], progress: (count: number) => void, add: (items: any[]) => Promise<void>) {
+    if (items && items.length > 0) {
+      items.forEach(i => { i.ProviderName = providerName.toUpperCase(); i.Tag = tag; })
+      progress(items.length);
+      await add(items);
+    }
   }
 
   async importSelectedTagsFromFile(filename: string, tags: string[]) {
@@ -247,7 +272,7 @@ export class IngestComponent implements OnInit {
         this.status[2] = `${matching} messages for selected tags`;
       });
       try {
-        const addedCount = await this.dbService.addMessages(messagesMatchingTag, null);
+        const addedCount = await this.dbService.addMessages(messagesMatchingTag);
       } catch (e) {
         this.ngZone.run(() => this.status[3] = e);
       }

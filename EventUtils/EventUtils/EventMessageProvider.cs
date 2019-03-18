@@ -23,15 +23,15 @@ namespace EventLogExpert
         public EventMessageProvider(string providerName, string computerName, Action<string> traceAction)
         {
             _providerName = providerName;
-            _traceAction = traceAction;
+            _traceAction = s => { };
             _registryProvider = new RegistryProvider(computerName, _traceAction);
         }
 
-        public IEnumerable<Message> LoadMessages()
+        public ProviderDetails LoadProviderDetails()
         {
-            var legacyMessages = LoadMessagesFromLegacyProvider();
-            var modernMessages = LoadMessagesFromModernProvider();
-            return legacyMessages.Concat(modernMessages);
+            var provider = LoadMessagesFromModernProvider();
+            provider.Messages = LoadMessagesFromLegacyProvider().ToList();
+            return provider;
         }
 
         /// <summary>
@@ -53,10 +53,13 @@ namespace EventLogExpert
 
             var messages = new List<Message>();
             foreach (var file in legacyProviderFiles)
+            {
+                var hModule = IntPtr.Zero;
+
                 try
                 {
                     // https://stackoverflow.com/questions/33498244/marshaling-a-message-table-resource
-                    var hModule = NativeMethods.LoadLibrary(file);
+                    hModule = NativeMethods.LoadLibrary(file);
                     var msgTableInfo =
                         NativeMethods.FindResource(hModule, 1, NativeMethods.RT_MESSAGETABLE);
                     var msgTable = NativeMethods.LoadResource(hModule, msgTableInfo);
@@ -99,13 +102,15 @@ namespace EventLogExpert
                         // Advance to the next block
                         blockPtr = IntPtr.Add(blockPtr, blockSize);
                     }
-
-                    NativeMethods.FreeLibrary(hModule);
                 }
-                catch (Exception ex)
+                finally
                 {
-                    _traceAction($"Exception loading legacy provider {_providerName}: {ex}");
+                    if (hModule != IntPtr.Zero)
+                    {
+                        NativeMethods.FreeLibrary(hModule);
+                    }
                 }
+            }
 
             _traceAction($"Returning {messages.Count} messages for provider {_providerName}");
             return messages;
@@ -116,56 +121,41 @@ namespace EventLogExpert
         ///     Computer\HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT
         /// </summary>
         /// <returns></returns>
-        private IEnumerable<Message> LoadMessagesFromModernProvider()
+        private ProviderDetails LoadMessagesFromModernProvider()
         {
             _traceAction($"LoadMessagesFromModernProvider called for provider {_providerName}");
 
-            ProviderMetadata providerMetadata;
-            try
-            {
-                providerMetadata = new ProviderMetadata(_providerName);
+            var provider = new ProviderDetails {ProviderName = _providerName};
 
-                if (providerMetadata.Id == Guid.Empty)
-                {
-                    _traceAction($"Provider {_providerName} has no provider GUID. Returning 0 messages.");
-                    return new Message[0];
-                }
-            }
-            catch (Exception ex)
+            var providerMetadata = new ProviderMetadata(_providerName);
+
+            if (providerMetadata.Id == Guid.Empty)
             {
-                _traceAction($"Exception loading provider metadata for {_providerName}: {ex}");
-                _traceAction("Returning 0 messages.");
-                return new Message[0];
+                _traceAction($"Provider {_providerName} has no provider GUID. Returning empty provider.");
+                return provider;
             }
 
-            var messages = new List<Message>();
-            try
+            provider.Events = providerMetadata.Events.Select(e => new Event
             {
-                messages.AddRange(providerMetadata.Tasks.Select(t => new Message
-                {
-                    Text = t.DisplayName ?? t.Name,
-                    ShortId = (short) t.Value,
-                    ProviderName = _providerName,
-                    RawId = t.Value
-                }));
+                Description = e.Description, Id = e.Id, Keywords = e.Keywords.Select(k => k.Value).ToArray(),
+                Level = e.Level.Value, LogName = e.LogLink.LogName, Opcode = e.Opcode.Value,
+                Task = e.Task.Value, Version = e.Version, Template = e.Template
+            }).ToList();
 
-                messages.AddRange(providerMetadata.Events.Select(ev => new Message
-                {
-                    Text = ev.Description,
-                    ShortId = (short) ev.Id,
-                    ProviderName = _providerName,
-                    RawId = ev.Id,
-                    LogLink = ev.LogLink?.LogName,
-                    Template = ev.Template
-                }));
-            }
-            catch (Exception ex)
-            {
-                _traceAction($"Exception loading modern provider {_providerName}: {ex}");
-            }
+            provider.Keywords = providerMetadata.Keywords
+                .Select(i => new ProviderDetails.ValueName {Value = i.Value, Name = i.DisplayName ?? i.Name})
+                .ToList();
 
-            _traceAction($"Returning {messages.Count} for provider {_providerName}");
-            return messages;
+            provider.Opcodes = providerMetadata.Opcodes
+                .Select(i => new ProviderDetails.ValueName {Value = i.Value, Name = i.DisplayName ?? i.Name})
+                .ToList();
+
+            provider.Tasks = providerMetadata.Tasks
+                .Select(i => new ProviderDetails.ValueName {Value = i.Value, Name = i.DisplayName ?? i.Name})
+                .ToList();
+
+            _traceAction($"Returning {provider.Events?.Count} events for provider {_providerName}");
+            return provider;
         }
     }
 }

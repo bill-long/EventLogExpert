@@ -84,9 +84,11 @@ namespace EventLogExpert
                 // Now we have all our paths, but they are not expanded yet, so expand them
                 files = GetExpandedFilePaths(files).ToList();
 
+                hklm.Close();
                 return files;
             }
 
+            hklm.Close();
             return null;
         }
 

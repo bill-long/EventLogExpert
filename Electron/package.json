@@ -15,7 +15,7 @@
     "build": "npm run builddll && npm run postinstall:electron && npm run electron:serve-tsc && ng build",
     "build:dev": "npm run build -- -c dev",
     "build:prod": "npm run build -- -c production",
-    "builddll": "dotnet build ../EventUtils/EventUtils -o ../../Electron -f net472 -c Release",
+    "builddll": "dotnet publish ../EventUtils/EventUtils -o ../../Electron/eventutils -f net472 -c Debug",
     "ng:serve": "ng serve",
     "ng:serve:web": "npm run postinstall:web && ng serve -o",
     "electron:serve-tsc": "tsc -p tsconfig-serve.json",

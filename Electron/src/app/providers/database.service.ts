@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
 import { from, Observable, Subject, Observer } from 'rxjs';
-import { Message, Tag } from './database.models';
+import { Message, Tag, ProviderValueName, ProviderEvent } from './database.models';
 import { take, shareReplay } from 'rxjs/operators';
 import Dexie from 'dexie';
 
@@ -53,39 +53,12 @@ export class DatabaseService {
    * Add messages to the database.
    * @param messages The messages to add.
    */
-  addMessages(messages: any[], reportProgress: (s: string) => any): Promise<number> {
-    return new Promise<number>(async resolve => {
-      const batchSize = 100000;
-      let total = 0;
-      for (let i = 0; i < messages.length; i += batchSize) {
-        const added = await this.addOneBatchOfMessages(messages.slice(i, i + batchSize));
-        total += added;
-        if (reportProgress) {
-          reportProgress(`${total} / ${messages.length}`);
-        }
-      }
-
-      const uniqueTags = Array.from(new Set(messages.map(m => m.Tag)));
-      for (let i = 0; i < uniqueTags.length; i++) {
-        const t = uniqueTags[i];
-        if (!this.tagsCache.includes(t)) {
-          this.tagsCache.push(t);
-          await this.addTag({ name: t });
-        }
-      }
-
-      resolve(total);
-    });
-  }
-
-  addMessages$(messages: any[], reportProgress: (s: string) => any) {
-    return from(this.addMessages(messages, reportProgress));
-  }
-
-  async addOneBatchOfMessages(messages: Message[]): Promise<number> {
-    messages.forEach(m => m.ProviderName = m.ProviderName.toUpperCase());
+  async addMessages(messages: any[]): Promise<void> {
     await this.db.messages.bulkAdd(messages);
-    return messages.length;
+  }
+
+  addMessages$(messages: any[]) {
+    return from(this.addMessages(messages));
   }
 
   async addTag(tag: { name: string }): Promise<void> {
@@ -95,6 +68,22 @@ export class DatabaseService {
       const newPriority = this.mergeTagPriority([...tags, tag.name], this.tagsCache);
       this.tagsByPrioritySubject.next(newPriority);
     });
+  }
+
+  async addEvents(events: ProviderEvent[]) {
+    await this.db.events.bulkAdd(events);
+  }
+
+  async addKeywords(keywords: ProviderValueName[]) {
+    await this.db.keywords.bulkAdd(keywords);
+  }
+
+  async addOpcodes(opcodes: ProviderValueName[]) {
+    await this.db.opcodes.bulkAdd(opcodes);
+  }
+
+  async addTasks(tasks: ProviderValueName[]) {
+    await this.db.tasks.bulkAdd(tasks);
   }
 
   async getAllMessages() {
@@ -131,6 +120,22 @@ export class DatabaseService {
 
   deleteAllMessages$() {
     return from(this.deleteAllMessages());
+  }
+
+  async findEvents(providerName: string, id: number, version: string, logName: string) {
+    return await this.db.events.where({ ProviderName: providerName, Id: id, Version: version, LogName: logName }).toArray();
+  }
+
+  async findKeyword(providerName: string, value: number) {
+    return await this.db.keywords.where({ ProviderName: providerName, Value: value }).toArray();
+  }
+
+  async findOpcode(providerName: string, value: number) {
+    return await this.db.opcodes.where({ ProviderName: providerName, Value: value }).toArray();
+  }
+
+  async findTask(providerName: string, value: number) {
+    return await this.db.tasks.where({ ProviderName: providerName, Value: value }).toArray();
   }
 
   findMessages$(providerName: string, id: number, logName: string) {
@@ -207,15 +212,27 @@ export class DatabaseService {
 class MessageDatabase extends Dexie {
   messages: Dexie.Table<Message, number>;
   tags: Dexie.Table<Tag, number>;
+  events: Dexie.Table<ProviderEvent, number>;
+  keywords: Dexie.Table<ProviderValueName, number>;
+  opcodes: Dexie.Table<ProviderValueName, number>;
+  tasks: Dexie.Table<ProviderValueName, number>;
 
   constructor() {
     super('messagesDb');
     this.version(1).stores({
       messages: '++, [RawId+ProviderName], [ShortId+ProviderName], Tag',
-      tags: '++'
+      tags: '++',
+      events: '++, [ProviderName+Id+Version+LogName]',
+      keywords: '++, [ProviderName+Value]',
+      opcodes: '++, [ProviderName+Value]',
+      tasks: '++, [ProviderName+Value]'
     });
 
     this.messages = this.table('messages');
     this.tags = this.table('tags');
+    this.events = this.table('events');
+    this.keywords = this.table('keywords');
+    this.opcodes = this.table('opcodes');
+    this.tasks = this.table('tasks');
   }
 }

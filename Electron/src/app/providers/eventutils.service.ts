@@ -1,5 +1,7 @@
 import { ElectronService } from './electron.service';
 import { Injectable } from '@angular/core';
+import { Message, ProviderEvent } from './database.models';
+import { Func } from 'electron-edge-js';
 
 @Injectable()
 export class EventUtils {
@@ -7,26 +9,35 @@ export class EventUtils {
     constructor(private electronSvc: ElectronService) { }
 
     getActiveEventLogReader = this.electronSvc.edge.func({
-        assemblyFile: this.electronSvc.extraResourcesPath + 'EventLogExpert.dll',
+        assemblyFile: this.electronSvc.extraResourcesPath + 'eventutils/EventLogExpert.dll',
         typeName: 'EventLogExpert.EventReader',
         methodName: 'GetActiveEventLogReader'
     });
 
     getEventLogFileReader = this.electronSvc.edge.func({
-        assemblyFile: this.electronSvc.extraResourcesPath + 'EventLogExpert.dll',
+        assemblyFile: this.electronSvc.extraResourcesPath + 'eventutils/EventLogExpert.dll',
         typeName: 'EventLogExpert.EventReader',
         methodName: 'GetEventLogFileReader'
     });
 
     getProviderNames = this.electronSvc.edge.func({
-        assemblyFile: this.electronSvc.extraResourcesPath + 'EventLogExpert.dll',
+        assemblyFile: this.electronSvc.extraResourcesPath + 'eventutils/EventLogExpert.dll',
         typeName: 'EventLogExpert.ProviderReader',
         methodName: 'GetProviderNames'
     });
 
-    loadProviderMessages = this.electronSvc.edge.func({
-        assemblyFile: this.electronSvc.extraResourcesPath + 'EventLogExpert.dll',
+    loadProviderDetails: Func<{}, ProviderDetails> = this.electronSvc.edge.func({
+        assemblyFile: this.electronSvc.extraResourcesPath + 'eventutils/EventLogExpert.dll',
         typeName: 'EventLogExpert.ProviderReader',
-        methodName: 'LoadProviderMessages'
+        methodName: 'LoadProviderDetails'
     });
+}
+
+export interface ProviderDetails {
+    ProviderName: string;
+    Messages: Message[];
+    Events: ProviderEvent[];
+    Keywords: { Value: number; Name: string }[];
+    Opcodes: { Value: number; Name: string }[];
+    Tasks: { Value: number; Name: string }[];
 }

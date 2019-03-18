@@ -19,7 +19,7 @@ namespace EventLogExpert
             });
         }
 
-        public async Task<object> LoadProviderMessages(dynamic input)
+        public async Task<object> LoadProviderDetails(dynamic input)
         {
             try
             {
@@ -32,7 +32,7 @@ namespace EventLogExpert
                     try
                     {
                         var p = new EventMessageProvider(providerName, server, Logger);
-                        return p.LoadMessages();
+                        return p.LoadProviderDetails();
                     }
                     catch (Exception ex)
                     {
