@@ -11,3 +11,24 @@ export interface Message {
 export interface Tag {
     name: string;
 }
+
+export interface ProviderEvent {
+    ProviderName: string;
+    Tag: string;
+    Id: number;
+    Version: string;
+    LogName: string;
+    Level: number;
+    Opcode: number;
+    Task: number;
+    Keywords: number[];
+    Template: string;
+    Description: string;
+}
+
+export interface ProviderValueName {
+    ProviderName: string;
+    Tag: string;
+    Value: number;
+    Name: string;
+}

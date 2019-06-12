@@ -26,7 +26,7 @@ namespace EventLogExpert
         /// from NodeJS.
         /// </summary>
         /// <param name="input"></param>
-        /// <returns>A delegate that must be called asychronously from NodeJS</returns>
+        /// <returns>A delegate that must be called asynchronously from NodeJS</returns>
         public Task<object> GetActiveEventLogReader(dynamic input)
         {
             var logName = input.logName;
@@ -50,6 +50,8 @@ namespace EventLogExpert
                         events.Add(new
                         {
                             evt.Id,
+                            evt.Version,
+                            evt.Keywords,
                             evt.Qualifiers,
                             evt.LogName,
                             evt.MachineName,
@@ -95,7 +97,7 @@ namespace EventLogExpert
         /// from NodeJS.
         /// </summary>
         /// <param name="input"></param>
-        /// <returns>A delegate that must be called asychronously from NodeJS</returns>
+        /// <returns>A delegate that must be called asynchronously from NodeJS</returns>
         public Task<object> GetEventLogFileReader(dynamic input)
         {
             var file = input.file;
@@ -118,6 +120,8 @@ namespace EventLogExpert
                         events.Add(new
                         {
                             evt.Id,
+                            evt.Version,
+                            evt.Keywords,
                             evt.Qualifiers,
                             evt.LogName,
                             evt.MachineName,

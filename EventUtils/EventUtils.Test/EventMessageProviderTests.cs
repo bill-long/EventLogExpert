@@ -24,16 +24,19 @@ namespace EventUtils.Test
             var providers = new List<string>(session.GetProviderNames().OrderBy(name => name));
 
             // Act
-            var messages = new List<Message>();
+            var providerData = new List<ProviderDetails>();
             foreach (var providerName in providers)
             {
                 var p = new EventMessageProvider(providerName, _output.WriteLine);
-                messages.AddRange(p.LoadMessages());
+                providerData.Add(p.LoadProviderDetails());
             }
 
+            int messageCount = providerData.Sum(p => p.Messages.Count());
+            int eventCount = providerData.Sum(p => p.Events?.Count ?? 0);
+
             // Assert
-            _output.WriteLine($"Found {providers.Count} providers and loaded {messages.Count} messages");
-            Assert.True(messages.Count > 1000000);
+            _output.WriteLine($"Found {providers.Count} providers and loaded {messageCount} messages and {eventCount} events.");
+            Assert.True(messageCount > 1000);
         }
 
         [Fact]
@@ -43,10 +46,10 @@ namespace EventUtils.Test
             var emp = new EventMessageProvider("Application Error", _output.WriteLine);
 
             // Act
-            var result = emp.LoadMessages();
+            var result = emp.LoadProviderDetails();
 
             // Assert
-            Assert.NotEmpty(result);
+            Assert.NotEmpty(result.Messages);
         }
 
         [Fact]
@@ -57,23 +60,11 @@ namespace EventUtils.Test
             var providers = new List<string>(session.GetProviderNames().Distinct().OrderBy(name => name));
 
             // Act
-            var messages = new Dictionary<string, Dictionary<long, Message>>();
+            var providerData = new Dictionary<string, ProviderDetails>();
             foreach (var providerName in providers)
             {
                 var p = new EventMessageProvider(providerName, _output.WriteLine);
-                var eventDictionary = new Dictionary<long, Message>();
-                messages.Add(providerName, eventDictionary);
-                foreach (var m in p.LoadMessages())
-                {
-                    if (eventDictionary.ContainsKey(m.RawId))
-                    {
-                        _output.WriteLine($"Duplicate raw event ID {m.RawId} for provider {providerName}");
-                    }
-                    else
-                    {
-                        eventDictionary.Add(m.RawId, m);
-                    }
-                }
+                providerData.Add(providerName, p.LoadProviderDetails());
             }
 
             var reader = new EventLogReader("Application", PathType.LogName) { BatchSize = 1000 };
@@ -86,28 +77,22 @@ namespace EventUtils.Test
             {
                 total += 1;
 
-                if (!messages.TryGetValue(evt.ProviderName, out var eventIdDictionary))
+                if (!providerData.TryGetValue(evt.ProviderName, out var provider))
                 {
                     _output.WriteLine("Could not find provider: " + evt.ProviderName);
                     continue;
                 }
 
-                if (!eventIdDictionary.TryGetValue(evt.Id, out var message))
+                if (provider.Events?.FirstOrDefault(e => e.Id == evt.Id) == null)
                 {
-                    var eventByShortId = eventIdDictionary.Values.Where(ev => ev.ShortId == evt.Id).ToList();
-                    if (eventByShortId.Count == 0)
+                    if (provider.Messages.FirstOrDefault(m => m.RawId == evt.Id) == null)
                     {
-                        notfound += 1;
-                        _output.WriteLine($"Could not find event matching id {evt.Id} for provider {evt.ProviderName}");
-                        continue;
+                        if (provider.Messages.FirstOrDefault(m => m.ShortId == evt.Id) == null)
+                        {
+                            notfound += 1;
+                            _output.WriteLine($"Could not find event matching id {evt.Id} for provider {evt.ProviderName}");
+                        }
                     }
-                    else if (eventByShortId.Count > 1)
-                    {
-                        notfound += 1;
-                        _output.WriteLine($"Ambiguous id {evt.Id} for provider {evt.ProviderName}");
-                    }
-
-                    message = eventByShortId.First();
                 }
 
                 found += 1;

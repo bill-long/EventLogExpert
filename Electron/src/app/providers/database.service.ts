@@ -2,15 +2,9 @@ import { Injectable } from '@angular/core';
 import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
 import { from, Observable, Subject, Observer } from 'rxjs';
-import { Message } from './database.models';
+import { Message, Tag, ProviderValueName, ProviderEvent } from './database.models';
 import { take, shareReplay } from 'rxjs/operators';
-
-const DATABASE_NAME = 'messagesDb';
-const MESSAGES_OBJECTSTORE_NAME = 'messages';
-const TAGS_OBJECTSTORE_NAME = 'tags';
-const RAWID_INDEX = 'RawId, ProviderName';
-const SHORTID_INDEX = 'ShortId, ProviderName';
-const TAG_INDEX = 'Tag';
+import Dexie from 'dexie';
 
 @Injectable({
   providedIn: 'root'
@@ -30,187 +24,122 @@ const TAG_INDEX = 'Tag';
  */
 export class DatabaseService {
 
-  db: IDBDatabase;
+  db = new MessageDatabase();
   tagsCache: string[];
   tagsByPriority$: Observable<string[]>;
   private tagsByPrioritySubject = new Subject<string[]>();
 
   constructor(private electronService: ElectronService) {
     this.tagsByPriority$ = this.tagsByPrioritySubject.pipe(shareReplay(1));
-    const openReq = indexedDB.open(DATABASE_NAME, 1);
-    openReq.onerror = (ev) => {
-      console.log(`Failed to open ${DATABASE_NAME}`, ev);
-    };
 
-    openReq.onsuccess = async (ev: any) => {
-      this.db = ev.target.result;
-      this.tagsCache = await this.getAllTags();
+    this.db.tags.toArray().then(t => {
+      this.tagsCache = t.map(tag => tag.name);
       const tagsByPriorityString = localStorage.getItem('tagsByPriority');
       if (tagsByPriorityString) {
         const storedTagPriority = JSON.parse(tagsByPriorityString);
         const merged = this.mergeTagPriority(storedTagPriority, this.tagsCache);
         this.tagsByPrioritySubject.next(merged);
       } else {
+        // Since we don't have any priority stored (probably first-time launch),
+        // sort in descending alpha order, because we generally want Windows at
+        // the top.
+        this.tagsCache = this.tagsCache.sort((a, b) => b.localeCompare(a));
         this.tagsByPrioritySubject.next(this.tagsCache);
       }
-    };
-
-    openReq.onupgradeneeded = (ev: any) => {
-      this.db = ev.target.result;
-      let messagesObjectStore;
-      if (ev.oldVersion < 1) {
-        messagesObjectStore = this.db.createObjectStore(MESSAGES_OBJECTSTORE_NAME, { autoIncrement: true });
-        this.db.createObjectStore(TAGS_OBJECTSTORE_NAME, { autoIncrement: true });
-      } else {
-        messagesObjectStore = ev.target.transaction.objectStore(MESSAGES_OBJECTSTORE_NAME);
-      }
-
-      messagesObjectStore.createIndex(RAWID_INDEX, ['RawId', 'ProviderName'], { unique: false });
-      messagesObjectStore.createIndex(SHORTID_INDEX, ['ShortId', 'ProviderName'], { unique: false });
-      messagesObjectStore.createIndex(TAG_INDEX, ['Tag'], { unique: false });
-    };
+    });
   }
 
   /**
    * Add messages to the database.
    * @param messages The messages to add.
    */
-  addMessages(messages: any[], reportProgress: (s: string) => any): Promise<number> {
-    return new Promise<number>(async resolve => {
-      const batchSize = 100000;
-      let total = 0;
-      for (let i = 0; i < messages.length; i += batchSize) {
-        const added = await this.addOneBatchOfMessages(messages.slice(i, i + batchSize));
-        total += added;
-        if (reportProgress) {
-          reportProgress(`${total} / ${messages.length}`);
-        }
-      }
+  async addMessages(messages: any[]): Promise<void> {
+    await this.db.messages.bulkAdd(messages);
+  }
 
-      const uniqueTags = Array.from(new Set(messages.map(m => m.Tag)));
-      for (let i = 0; i < uniqueTags.length; i++) {
-        const t = uniqueTags[i];
-        if (!this.tagsCache.includes(t)) {
-          this.tagsCache.push(t);
-          const addTagResult = await this.addTag({ name: t });
-        }
-      }
+  addMessages$(messages: any[]) {
+    return from(this.addMessages(messages));
+  }
 
-      resolve(total);
+  async addTag(tag: { name: string }): Promise<void> {
+    await this.db.tags.add(tag);
+    this.tagsCache.push(tag.name);
+    this.tagsByPriority$.pipe(take(1)).subscribe(tags => {
+      const newPriority = this.mergeTagPriority([...tags, tag.name], this.tagsCache);
+      this.tagsByPrioritySubject.next(newPriority);
     });
   }
 
-  addMessages$(messages: any[], reportProgress: (s: string) => any) {
-    return from(this.addMessages(messages, reportProgress));
+  async addEvents(events: ProviderEvent[]) {
+    await this.db.events.bulkAdd(events);
   }
 
-  addOneBatchOfMessages(messages: any[]): Promise<number> {
-    return new Promise<number>(async resolve => {
-      let itemsAdded = 0;
-      const transaction = this.db.transaction(MESSAGES_OBJECTSTORE_NAME, 'readwrite');
-      transaction.oncomplete = ev => {
-        resolve(itemsAdded);
-      };
-      transaction.onabort = err => {
-        throw new Error('addOneBatchOfMessages abort: ' + transaction.error.message);
-      };
-      const messageStore = transaction.objectStore(MESSAGES_OBJECTSTORE_NAME);
-      messages.forEach(m => {
-        const r = messageStore.add(m);
-        itemsAdded++;
-      });
-    });
+  async addKeywords(keywords: ProviderValueName[]) {
+    await this.db.keywords.bulkAdd(keywords);
   }
 
-  addTag(tag: { name: string }): Promise<string> {
-    return new Promise<string>(resolve => {
-      const transaction = this.db.transaction(TAGS_OBJECTSTORE_NAME, 'readwrite');
-      transaction.oncomplete = ev => {
-        this.tagsCache.push(tag.name);
-        this.tagsByPriority$.pipe(take(1)).subscribe(tags => {
-          const newPriority = this.mergeTagPriority([...tags, tag.name], this.tagsCache);
-          this.tagsByPrioritySubject.next(newPriority);
-        });
-        resolve(tag.name);
-      };
-      transaction.onerror = ev => {
-        throw new Error('addTag error: ' + transaction.error.message);
-      };
-      transaction.onabort = ev => {
-        throw new Error('addTag abort: ' + transaction.error.message);
-      };
-      const tagStore = transaction.objectStore(TAGS_OBJECTSTORE_NAME);
-      const req = tagStore.add(tag);
-    });
+  async addOpcodes(opcodes: ProviderValueName[]) {
+    await this.db.opcodes.bulkAdd(opcodes);
   }
 
-  getAllMessages() {
-    return new Promise<any[]>(resolve => {
-      const messages = [];
-      this.db.transaction(MESSAGES_OBJECTSTORE_NAME).objectStore(MESSAGES_OBJECTSTORE_NAME).openCursor().onsuccess = (ev: any) => {
-        const cursor = ev.target.result;
-        if (cursor) {
-          messages.push(cursor.value);
-          cursor.continue();
-        } else {
-          resolve(messages);
-        }
-      };
-    });
+  async addTasks(tasks: ProviderValueName[]) {
+    await this.db.tasks.bulkAdd(tasks);
+  }
+
+  async getAllMessages() {
+    return await this.db.messages.toArray();
   }
 
   getAllMessages$(): Observable<any[]> {
     return new Observable(o => {
       const maxBuffer = 1000;
       let buffer = [];
-      this.db.transaction(MESSAGES_OBJECTSTORE_NAME).objectStore(MESSAGES_OBJECTSTORE_NAME).openCursor().onsuccess = (ev: any) => {
-        const cursor = ev.target.result;
-        if (cursor) {
-          buffer.push(cursor.value);
-          if (buffer.length === maxBuffer) {
-            o.next(buffer);
-            buffer = [];
-          }
-          cursor.continue();
-        } else {
-          if (buffer.length > 0) {
-            o.next(buffer);
-          }
-          o.complete();
+      this.db.messages.each((message, cursor) => {
+        buffer.push(message);
+        if (buffer.length === maxBuffer) {
+          o.next(buffer);
+          buffer = [];
         }
-      };
+      }).then(() => {
+        if (buffer.length > 0) {
+          o.next(buffer);
+        }
+        o.complete();
+      });
     });
   }
 
-  getAllTags(): Promise<string[]> {
-    return new Promise<string[]>(resolve => {
-      const tags = [];
-      this.db.transaction(TAGS_OBJECTSTORE_NAME)
-        .objectStore(TAGS_OBJECTSTORE_NAME)
-        .openCursor()
-        .onsuccess = (ev: any) => {
-          const cursor = ev.target.result;
-          if (cursor) {
-            tags.push(cursor.value.name);
-            cursor.continue();
-          } else {
-            resolve(tags);
-          }
-        };
-    });
+  async getAllTags(): Promise<string[]> {
+    let tags = await this.db.tags.toArray();
+    return tags.map(t => t.name);
   }
 
-  deleteAllMessages() {
-    return new Promise(resolve => {
-      this.db.transaction(MESSAGES_OBJECTSTORE_NAME, 'readwrite')
-        .objectStore(MESSAGES_OBJECTSTORE_NAME)
-        .clear()
-        .onsuccess = (ev) => resolve();
-    });
+  async deleteAllMessages() {
+    await this.db.messages.clear();
   }
 
   deleteAllMessages$() {
     return from(this.deleteAllMessages());
+  }
+
+  async findEvents(providerName: string, id: number, version: string, logName: string) {
+    return await this.db.events.where({ ProviderName: providerName, Id: id, Version: version, LogName: logName }).toArray();
+  }
+
+  async findKeyword(providerName: string, value: number) {
+    return await this.db.keywords.where({ ProviderName: providerName, Value: value }).toArray();
+  }
+
+  async findOpcode(providerName: string, value: number) {
+    return await this.db.opcodes.where({ ProviderName: providerName, Value: value }).toArray();
+  }
+
+  async findTask(providerName: string, value: number) {
+    return await this.db.tasks.where({ ProviderName: providerName, Value: value }).toArray();
+  }
+
+  findMessages$(providerName: string, id: number, logName: string) {
+    return from(this.findMessages(providerName, id, logName));
   }
 
   /**
@@ -219,70 +148,49 @@ export class DatabaseService {
    * ShortID that matches the provided RawID.
    * @param providerName The name of the event provider
    * @param id The raw ID of event.
+   * @param logName The logName if available.
    */
-  findMessages(providerName: string, id: number, logName: string): Promise<Message[]> {
-    return this.getMessages(providerName, id, logName, true);
-  }
+  async findMessages(providerName: string, id: number, logName: string): Promise<Message[]> {
 
-  findMessages$(providerName: string, id: number, logName: string) {
-    return from(this.findMessages(providerName, id, logName));
+    const start = AppConfig.production ? null : performance.now();
+
+    providerName = providerName.toUpperCase();
+
+    let results = await this.db.messages
+      .where({'RawId': id, 'ProviderName': providerName})
+      .toArray();
+
+    if (results.length < 1) {
+      results = await this.db.messages
+      .where({'ShortId': id, 'ProviderName': providerName})
+      .toArray();
+    }
+
+    if (!AppConfig.production) {
+      const end = performance.now();
+      console.log('getMessages finished', end - start, providerName, id, results);
+    }
+
+    // If a log name was provided...
+    if (logName) {
+      // Then return one with a matching log name if we can
+      const logNameMatches = results.filter(r => r.LogLink === logName);
+      if (logNameMatches.length > 0) {
+        return logNameMatches;
+      } else {
+        return results;
+      }
+    } else {
+      // If logName was not provided, then discard anything that has one
+      const noLogNameResults = results.filter(r => !r.LogLink);
+      return noLogNameResults;
+    }
   }
 
   setTagPriority(tagsByPriority: string[]) {
     const newTagPriority = this.mergeTagPriority(tagsByPriority, this.tagsCache);
     this.tagsByPrioritySubject.next(newTagPriority);
     localStorage.setItem('tagsByPriority', JSON.stringify(newTagPriority));
-  }
-
-  /**
-   * Private method to do the actual work of searching, first
-   * on raw ID and then on short ID.
-   * @param providerName The name of the event provider
-   * @param id The RawID of the event
-   * @param useRawId Whether we should try to match on RawId or ShortId
-   */
-  private getMessages(providerName: string, id: number, logName: string, useRawId: boolean): Promise<Message[]> {
-    return new Promise<any[]>(resolve => {
-      const start = performance.now();
-      const range = IDBKeyRange.only([id, providerName]);
-      const results: Message[] = [];
-      this.db.transaction(MESSAGES_OBJECTSTORE_NAME)
-        .objectStore(MESSAGES_OBJECTSTORE_NAME)
-        .index(useRawId ? RAWID_INDEX : SHORTID_INDEX)
-        .openCursor(range)
-        .onsuccess = async (ev: any) => {
-          const cursor = ev.target.result;
-          if (cursor) {
-            results.push(cursor.value);
-            cursor.continue();
-          } else {
-            if (results.length < 1 && useRawId) {
-              const shortIdResult = await this.getMessages(providerName, id, logName, false);
-              shortIdResult.forEach(s => results.push(s));
-            }
-
-            if (!AppConfig.production) {
-              const end = performance.now();
-              console.log('getMessages finished', end - start, providerName, id, useRawId, results);
-            }
-
-            // If a log name was provided...
-            if (logName) {
-              // Then return one with a matching log name if we can
-              const logNameMatches = results.filter(r => r.LogLink === logName);
-              if (logNameMatches.length > 0) {
-                resolve(logNameMatches);
-              } else {
-                resolve(results);
-              }
-            } else {
-              // If logName was not provided, then discard anything that has one
-              const noLogName = results.filter(r => !r.LogLink);
-              resolve(noLogName);
-            }
-          }
-        };
-    });
   }
 
   private mergeTagPriority(desiredPriority: string[], availableTags: string[]) {
@@ -298,5 +206,33 @@ export class DatabaseService {
     newPriority = [...newPriority, ...notIncluded];
 
     return newPriority;
+  }
+}
+
+class MessageDatabase extends Dexie {
+  messages: Dexie.Table<Message, number>;
+  tags: Dexie.Table<Tag, number>;
+  events: Dexie.Table<ProviderEvent, number>;
+  keywords: Dexie.Table<ProviderValueName, number>;
+  opcodes: Dexie.Table<ProviderValueName, number>;
+  tasks: Dexie.Table<ProviderValueName, number>;
+
+  constructor() {
+    super('messagesDb');
+    this.version(1).stores({
+      messages: '++, [RawId+ProviderName], [ShortId+ProviderName], Tag',
+      tags: '++',
+      events: '++, [ProviderName+Id+Version+LogName]',
+      keywords: '++, [ProviderName+Value]',
+      opcodes: '++, [ProviderName+Value]',
+      tasks: '++, [ProviderName+Value]'
+    });
+
+    this.messages = this.table('messages');
+    this.tags = this.table('tags');
+    this.events = this.table('events');
+    this.keywords = this.table('keywords');
+    this.opcodes = this.table('opcodes');
+    this.tasks = this.table('tasks');
   }
 }

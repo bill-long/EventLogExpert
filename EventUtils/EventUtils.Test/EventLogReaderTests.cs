@@ -22,9 +22,9 @@ namespace EventUtils.Test
         {
             // Arrange
             dynamic input = new ExpandoObject();
-            input.file = "C:\\Users\\bill\\Desktop\\system.evtx";
+            input.logName = "System";
             var reader = new EventReader();
-            var activeLogReader = await reader.GetEventLogFileReader(input);
+            var activeLogReader = await reader.GetActiveEventLogReader(input);
 
             // Act
             var allResults = new List<object>();
