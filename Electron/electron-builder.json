@@ -22,7 +22,7 @@
   ],
   "win": {
     "extraResources": [
-      "./*.dll"
+      "./eventutils"
     ],
     "icon": "dist",
     "target": [

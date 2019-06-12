@@ -6,7 +6,7 @@ import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
 import { DatabaseService } from './database.service';
 import { EventRecord } from './eventlog.models';
-import { Message } from './database.models';
+import { Message, ProviderValueName, ProviderEvent } from './database.models';
 
 @Injectable()
 export class EventLogService {
@@ -14,6 +14,10 @@ export class EventLogService {
     actions$: Subject<Action>;
     state$: Observable<State>;
     messageCache: { [key: string]: { [key: string]: { [key: string]: Message } } };
+    eventCache: { [key: string]: { [key: number]: { [key: string]: { [key: string]: ProviderEvent } } } };
+    keywordCache: { [key: string]: { [key: number]: ProviderValueName } }
+    opcodeCache: { [key: string]: { [key: number]: ProviderValueName } }
+    taskCache: { [key: string]: { [key: number]: ProviderValueName } }
     formatRegexp = new RegExp(/%([0-9]+)/g);
     timeFormat: Intl.DateTimeFormat;
 
@@ -26,6 +30,10 @@ export class EventLogService {
         }
 
         this.messageCache = {};
+        this.eventCache = {};
+        this.keywordCache = {};
+        this.opcodeCache = {};
+        this.taskCache = {};
         const initState: State = {
             loading: false,
             name: null,
@@ -58,17 +66,17 @@ export class EventLogService {
         this.actions$
             .pipe(filter(a => a instanceof FilterEventsAction), withLatestFrom(this.state$))
             .subscribe(([a, s]: [FilterEventsAction, State]) => {
-            const r = filterEvents(s.records, a.f, this);
-            this.actions$.next(new FilterEventsFinishedAction(r, a.f));
-        });
+                const r = filterEvents(s.records, a.f, this);
+                this.actions$.next(new FilterEventsFinishedAction(r, a.f));
+            });
 
         // Filter when a log finishes loading
         this.actions$
             .pipe(filter(a => a instanceof FinishedLoadingAction), withLatestFrom(this.state$))
             .subscribe(([a, s]: [FinishedLoadingAction, State]) => {
-            const r = filterEvents(s.records, s.filter, this);
-            this.actions$.next(new FilterEventsFinishedAction(r, s.filter));
-        });
+                const r = filterEvents(s.records, s.filter, this);
+                this.actions$.next(new FilterEventsFinishedAction(r, s.filter));
+            });
 
         // Whenever tags change, update text fields
         this.dbService.tagsByPriority$.pipe(withLatestFrom(this.state$)).subscribe(([t, s]) => {
@@ -211,21 +219,53 @@ export class EventLogService {
             const r = records[i];
 
             // Set the description string
-            const m = await this.getMessage(r.ProviderName, r.Id, r.LogName, tagsByPriority);
-            r.Description = this.formatDescription(r, m);
+            // Try modern providers first
+            let providerName = r.ProviderName.toUpperCase();
+            let e: ProviderEvent;
+            if (r.Version && r.LogName) {
+                const start = AppConfig.production ? null : performance.now();
+                e = await this.getEvent(providerName, r.Id, r.Version, r.LogName, tagsByPriority);
+                if (e) {
+                    // We found a modern event match, so fill in the rest
+                    const k = await this.getKeywords(providerName, r.Keywords, tagsByPriority);
+                    const o = await this.getOpcode(providerName, r.Opcode, tagsByPriority);
+                    const t = await this.getTask(providerName, r.Task, tagsByPriority);
 
-            // Set the task string
-            if (r.Task) {
-                r.TaskName = await this.getMessage(r.ProviderName, r.Task, null, tagsByPriority);
-            } else {
-                r.TaskName = 'None';
+                    if (!AppConfig.production) {
+                        const end = performance.now();
+                        console.log('getEvent/getKeywords/getOpcode/getTask completed', end - start, providerName, r.Id);
+                    }
+
+                    r.Description = this.formatDescription(r, e.Description);
+                    r.TaskName = t ? t.Name : '';
+                    r.KeywordNames = k ? k.map(kw => kw ? kw.Name : '').join(', ') : '';
+                    r.OpcodeName = o ? o.Name : '';
+                }
             }
 
-            // Set the Opcode string
-            if (r.Opcode) {
-                r.OpcodeName = await this.getMessage(r.ProviderName, r.Opcode, null, tagsByPriority);
-            } else {
-                r.OpcodeName = '';
+            if (!e) {
+                const m = await this.getMessage(providerName, r.Id, r.LogName, tagsByPriority);
+                r.Description = this.formatDescription(r, m);
+
+                // Set the task string
+                if (r.Task) {
+                    if (r.Task != r.Id) {
+                        r.TaskName = await this.getMessage(providerName, r.Task, null, tagsByPriority);
+                    } else {
+                        // If it's the same as the description Id, just set it to the number in parens.
+                        // This happens for events like 1014 from DNS Client Events for some reason.
+                        r.TaskName = `(${r.Task})`;
+                    }
+                } else {
+                    r.TaskName = 'None';
+                }
+
+                // Set the Opcode string
+                if (r.Opcode) {
+                    r.OpcodeName = await this.getMessage(providerName, r.Opcode, null, tagsByPriority);
+                } else {
+                    r.OpcodeName = '';
+                }
             }
 
             // Set the time string using the user-specified zone
@@ -233,16 +273,66 @@ export class EventLogService {
         }
     }
 
+    private async getEvent(providerName: string, id: number, version: string, logName: string, tagsByPriority: string[]): Promise<ProviderEvent> {
+        let e = this.getFromCache(this.eventCache, providerName, id, version, logName) as ProviderEvent;
+        if (e === undefined) {
+            let events = await this.dbService.findEvents(providerName, id, version, logName);
+            e = this.getFirstItemByPriority(events, tagsByPriority);
+            this.eventCache[providerName][id][version][logName] = e;
+        }
+
+        return e;
+    }
+
+    private async getKeywords(providerName: string, values: number[] | number, tagsByPriority: string[]) {
+        if (values == null || (values instanceof Array && values.length < 1)) {
+            return null;
+        }
+
+        let results: ProviderValueName[] = [];
+        
+        // If we didn't get passed an array, make it one
+        if (!(values instanceof Array)) {
+            values = [values];
+        }
+
+        values.forEach(async v => {
+            let k = this.getFromCache(this.keywordCache, providerName, v) as ProviderValueName;
+            if (k === undefined) {
+                let keywords = await this.dbService.findKeyword(providerName, v);
+                k = this.getFirstItemByPriority(keywords, tagsByPriority);
+                this.keywordCache[providerName][v] = k;
+                results.push(k);
+            }
+        });
+
+        return results;
+    }
+
+    private async getOpcode(providerName: string, value: number, tagsByPriority: string[]) {
+        let o = this.getFromCache(this.opcodeCache, providerName, value) as ProviderValueName;
+        if (o === undefined) {
+            let opcodes = await this.dbService.findOpcode(providerName, value);
+            o = this.getFirstItemByPriority(opcodes, tagsByPriority);
+            this.opcodeCache[providerName][value] = o;
+        }
+
+        return o;
+    }
+
+    private async getTask(providerName: string, value: number, tagsByPriority: string[]) {
+        let t = this.getFromCache(this.taskCache, providerName, value) as ProviderValueName;
+        if (t === undefined) {
+            let tasks = await this.dbService.findTask(providerName, value);
+            t = this.getFirstItemByPriority(tasks, tagsByPriority);
+            this.taskCache[providerName][value] = t;
+        }
+
+        return t;
+    }
+
     private async getMessage(providerName: string, messageNumber: number, logName: string, tagsByPriority: string[]): Promise<string> {
-        if (this.messageCache[providerName] === undefined) {
-            this.messageCache[providerName] = {};
-        }
-
-        if (this.messageCache[providerName][messageNumber] === undefined) {
-            this.messageCache[providerName][messageNumber] = {};
-        }
-
-        const messageFromCache = this.messageCache[providerName][messageNumber][logName];
+        const messageFromCache = this.getFromCache(this.messageCache, providerName, messageNumber, logName);
         if (messageFromCache !== undefined) {
             return messageFromCache ? messageFromCache.Text : '';
         } else {
@@ -269,6 +359,48 @@ export class EventLogService {
                 return '';
             }
         }
+    }
+
+    private getFirstItemByPriority(items: any[], tagsByPriority: string[]) {
+        if (items == null || items.length === 0) {
+            return null;
+        }
+
+        for (let i = 0; i < tagsByPriority.length; i++) {
+            const item = items.find(item => item.Tag === tagsByPriority[i]);
+            if (item) {
+                return item;
+            }
+        }
+
+        return null;
+    }
+
+    private getFromCache(cache: any, key1: string | number, key2: string | number, key3: string | number = undefined, key4: string | number = undefined) {
+        // The cache object can be from two to four levels deep
+        // Populate to the appropriate depth, then do the lookup
+        if (cache[key1] === undefined) {
+            cache[key1] = {};
+        }
+
+        if (key3 !== undefined && cache[key1][key2] === undefined) {
+            cache[key1][key2] = {};
+        }
+
+        if (key4 !== undefined && cache[key1][key2][key3] === undefined) {
+            cache[key1][key2][key3] = {};
+        }
+
+        let result = cache[key1][key2];
+        if (key3) {
+            result = result[key3];
+        }
+
+        if (key4) {
+            result = result[key4];
+        }
+
+        return result;
     }
 
     private formatDescription(record: EventRecord, messageFormat: string): string {
@@ -626,7 +758,7 @@ export const getEventXml = (r: EventRecord, s: EventLogService) => {
         `    <EventID` + (r.Qualifiers ? ` Qualifiers="${r.Qualifiers}"` : ``) + `>${r.Id}</EventID>\r\n` +
         `    <Level>${r.Level}</Level>\r\n` +
         `    <Task>${r.Task}</Task>\r\n` +
-        `    <Keywords>${r.Keywords ? r.Keywords.toString(16) : '0x0'}</Keywords>\r\n` +
+        `    <Keywords>${r.Keywords ? r.Keywords.map(k => k.toString(16)).join(',') : '0x0'}</Keywords>\r\n` +
         `    <TimeCreated SystemTime="${new Date(r.TimeCreated).toISOString()}" />\r\n` +
         `    <EventRecordID>${r.RecordId}</EventRecordID>\r\n` +
         `    <Channel>${r.LogName}</Channel>\r\n` +
