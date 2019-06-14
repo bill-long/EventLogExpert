@@ -107,7 +107,7 @@ export class EventLogService {
     }
 
     getTemplate(r: EventRecord) {
-        const cachedEvent = this.messageCache[r.ProviderName][r.Id][r.LogName];
+        const cachedEvent = this.getFromCache(this.messageCache, r.ProviderName, r.Id, r.LogName);
         if (cachedEvent) { return cachedEvent.Template; }
         return null;
     }
@@ -392,11 +392,11 @@ export class EventLogService {
         }
 
         let result = cache[key1][key2];
-        if (key3) {
+        if (key3 !== undefined) {
             result = result[key3];
         }
 
-        if (key4) {
+        if (key4 !== undefined) {
             result = result[key4];
         }
 
@@ -758,7 +758,7 @@ export const getEventXml = (r: EventRecord, s: EventLogService) => {
         `    <EventID` + (r.Qualifiers ? ` Qualifiers="${r.Qualifiers}"` : ``) + `>${r.Id}</EventID>\r\n` +
         `    <Level>${r.Level}</Level>\r\n` +
         `    <Task>${r.Task}</Task>\r\n` +
-        `    <Keywords>${r.Keywords ? r.Keywords.map(k => k.toString(16)).join(',') : '0x0'}</Keywords>\r\n` +
+        `    <Keywords>${r.Keywords ? r.Keywords.toString(16) : '0x0'}</Keywords>\r\n` +
         `    <TimeCreated SystemTime="${new Date(r.TimeCreated).toISOString()}" />\r\n` +
         `    <EventRecordID>${r.RecordId}</EventRecordID>\r\n` +
         `    <Channel>${r.LogName}</Channel>\r\n` +
