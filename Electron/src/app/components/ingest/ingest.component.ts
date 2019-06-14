@@ -224,7 +224,7 @@ export class IngestComponent implements OnInit {
         });
       });
 
-      this.addProviderDetailsToDatabase(results, tag);
+      await this.addProviderDetailsToDatabase(results, tag);
     }
 
     this.status.push('Done!');
@@ -235,7 +235,7 @@ export class IngestComponent implements OnInit {
   private async addProviderDetailsToDatabase(providerDetails: ProviderDetails, tag: string) {
     if (providerDetails) {
       if (!(this.dbService.tagsCache.find(t => t.toUpperCase() === tag.toUpperCase()))) {
-        this.dbService.addTag({ name: tag });
+        await this.dbService.addTag({ name: tag });
       }
       await this.addItemsToDatabase(providerDetails.ProviderName, tag, providerDetails.Messages, this.addMessagesFunc);
       await this.addItemsToDatabase(providerDetails.ProviderName, tag, providerDetails.Events, this.addEventsFunc);
@@ -261,9 +261,10 @@ export class IngestComponent implements OnInit {
     existingTags = existingTags.map(t => t.toLowerCase());
     const duplicateTags = tags.filter(t => existingTags.indexOf(t.toLowerCase()) > -1);
     if (duplicateTags.length > 0) {
-      this.status = [`Tags already exist: ${duplicateTags}`];
-      this.running = false;
-      return;
+      for (const t of duplicateTags) {
+        this.status = [`Deleting existing tag: ${t}`];
+        await this.dbService.deleteTag({ name: t });
+      }
     }
 
     const tagSet = new Set(tags);
@@ -278,13 +279,13 @@ export class IngestComponent implements OnInit {
         this.status[1] = `${total} total providers`;
         this.status[2] = `${matching} providers for selected tags`;
       });
-      providersMatchingTag.forEach(async p => {
+      for (const p of providersMatchingTag) {
         try {
           await this.addProviderDetailsToDatabase(p, p.Tag);
         } catch (e) {
           this.ngZone.run(() => this.status[3] = e);
         }
-      });
+      }
     },
       err => this.ngZone.run(() => this.status[3] = err),
       () => {

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { AppConfig } from '../../environments/environment';
 import { ElectronService } from './electron.service';
 import { from, Observable, Subject, Observer } from 'rxjs';
@@ -29,7 +29,7 @@ export class DatabaseService {
   tagsByPriority$: Observable<string[]>;
   private tagsByPrioritySubject = new Subject<string[]>();
 
-  constructor(private electronService: ElectronService) {
+  constructor(private electronService: ElectronService, private ngZone: NgZone) {
     this.tagsByPriority$ = this.tagsByPrioritySubject.pipe(shareReplay(1));
 
     this.db.tags.toArray().then(t => {
@@ -62,12 +62,32 @@ export class DatabaseService {
   }
 
   async addTag(tag: { name: string }): Promise<void> {
-    await this.db.tags.add(tag);
+    if (this.tagsCache.find(t => t === tag.name)) {
+      return;
+    }
     this.tagsCache.push(tag.name);
+    await this.db.tags.add(tag);
     this.tagsByPriority$.pipe(take(1)).subscribe(tags => {
       const newPriority = this.mergeTagPriority([...tags, tag.name], this.tagsCache);
       this.tagsByPrioritySubject.next(newPriority);
     });
+  }
+
+  deleteTag(tag: { name: string }): Promise<void> {
+    let p = this.ngZone.runOutsideAngular(async () => {
+      let keys = await this.db.messages.where({ Tag: tag.name }).primaryKeys();
+      await this.db.messages.bulkDelete(keys);
+      keys = await this.db.events.where({ Tag: tag.name }).primaryKeys();
+      await this.db.keywords.bulkDelete(keys);
+      keys = await this.db.opcodes.where({ Tag: tag.name }).primaryKeys();
+      await this.db.tasks.bulkDelete(keys);
+      keys = await this.db.tags.where({ name: tag.name }).primaryKeys();
+      await this.db.tasks.bulkDelete(keys);
+    }).then(() => {
+      this.tagsCache = this.tagsCache.filter(t => t !== tag.name);
+    });
+
+    return p;
   }
 
   async addEvents(events: ProviderEvent[]) {
@@ -157,13 +177,13 @@ export class DatabaseService {
     providerName = providerName.toUpperCase();
 
     let results = await this.db.messages
-      .where({'RawId': id, 'ProviderName': providerName})
+      .where({ 'RawId': id, 'ProviderName': providerName })
       .toArray();
 
     if (results.length < 1) {
       results = await this.db.messages
-      .where({'ShortId': id, 'ProviderName': providerName})
-      .toArray();
+        .where({ 'ShortId': id, 'ProviderName': providerName })
+        .toArray();
     }
 
     if (!AppConfig.production) {
@@ -221,11 +241,11 @@ class MessageDatabase extends Dexie {
     super('messagesDb');
     this.version(1).stores({
       messages: '++, [RawId+ProviderName], [ShortId+ProviderName], Tag',
-      tags: '++',
-      events: '++, [ProviderName+Id+Version+LogName]',
-      keywords: '++, [ProviderName+Value]',
-      opcodes: '++, [ProviderName+Value]',
-      tasks: '++, [ProviderName+Value]'
+      tags: '++, name',
+      events: '++, [ProviderName+Id+Version+LogName], Tag',
+      keywords: '++, [ProviderName+Value], Tag',
+      opcodes: '++, [ProviderName+Value], Tag',
+      tasks: '++, [ProviderName+Value], Tag'
     });
 
     this.messages = this.table('messages');
