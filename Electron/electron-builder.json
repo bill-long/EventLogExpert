@@ -30,12 +30,9 @@
     ],
     "publish": [
       {
-        "provider": "spaces",
-        "name": "eventlogexpert",
-        "region": "nyc3",
-        "channel": "latest",
-        "path": "/",
-        "acl": "public-read"
+        "provider": "github",
+        "repo": "EventLogExpert",
+        "owner": "bill-long"
       }
     ]
   }
