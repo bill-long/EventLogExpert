@@ -8,7 +8,7 @@ export interface EventRecord {
     MachineName: string;
     Level: string;
     Task: number;
-    Keywords: number[];
+    Keywords: number;
     User: string;
     Opcode: number;
     RecordId: number;
