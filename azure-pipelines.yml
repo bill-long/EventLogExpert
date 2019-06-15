@@ -14,6 +14,6 @@ steps:
 - task: PowerShell@2
   inputs:
     targetType: 'inline'
-    script: 'cd Electron
-      npm install
+    script: 'cd Electron;
+      npm install;
       npm run electron:windows'
