@@ -13,9 +13,12 @@ steps:
 - task: NodeTool@0
   inputs:
     versionSpec: '10.x'
-- task: PowerShell@2
+- task: Npm@1
   inputs:
-    targetType: 'inline'
-    script: 'cd Electron;
-      npm install;
-      npm run electron:windows'
+    command: 'install'
+    workingDir: 'Electron'
+- task: Npm@1
+  inputs:
+    command: 'custom'
+    customCommand: 'run electron:windows'
+    workingDir: 'Electron'
