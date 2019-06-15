@@ -22,8 +22,9 @@
     "electron:serve": "wait-on http-get://localhost:4200/ && npm run electron:serve-tsc && electron . --serve",
     "electron:local": "npm run build:prod && electron .",
     "electron:linux": "npm run build:prod && electron-builder build --linux",
-    "electron:windows": "npm run build:prod && electron-builder build --windows",
+    "electron:windows": "npm run build:prod && electron-builder build --windows --publish never",
     "electron:mac": "npm run build:prod && electron-builder build --mac",
+    "publish": "npm run build:prod && electron-builder build --windows --publish onTagOrDraft",
     "test": "npm run postinstall:web && ng test",
     "e2e": "npm run build:prod && mocha --timeout 300000 --require ts-node/register e2e/**/*.spec.ts",
     "version": "conventional-changelog -i CHANGELOG.md -s -r 0 && git add CHANGELOG.md"
