@@ -7,13 +7,18 @@ trigger:
 - master
 
 pool:
-  vmImage: 'ubuntu-latest'
+  vmImage: 'windows-2019'
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
-
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+- task: NodeTool@0
+  inputs:
+    versionSpec: '10.x'
+- task: Npm@1
+  inputs:
+    command: 'install'
+    workingDir: 'Electron'
+- task: Npm@1
+  inputs:
+    command: 'custom'
+    customCommand: 'run electron:windows'
+    workingDir: 'Electron'
