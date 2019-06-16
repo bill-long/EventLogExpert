@@ -5,6 +5,7 @@ import { ElectronService } from '../../providers/electron.service';
 import { FormGroup, AbstractControl, FormControl } from '@angular/forms';
 import { Message, ProviderEvent, ProviderValueName } from '../../providers/database.models';
 import { Observable } from 'rxjs';
+import { concatMap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-ingest',
@@ -186,15 +187,8 @@ export class IngestComponent implements OnInit {
 
     this.running = true;
     this.status = ['Checking tags..'];
-
-    const existingTags = await this.dbService.getAllTags();
-    if (existingTags.find(t => t.toLowerCase() === tag.toLowerCase())) {
-      this.status = ['Tag already exists. Please enter a new tag name.'];
-      this.running = false;
-      return;
-    } else {
-      await this.dbService.addTag({ name: tag });
-    }
+    await this.deleteTags([tag]);
+    await this.dbService.addTag({ name: tag });
 
     this.status = [];
 
@@ -252,11 +246,7 @@ export class IngestComponent implements OnInit {
     }
   }
 
-  async importSelectedTagsFromFile(filename: string, tags: string[]) {
-
-    this.running = true;
-    this.status = ['Checking tags..'];
-
+  private async deleteTags(tags: string[]) {
     let existingTags = await this.dbService.getAllTags();
     existingTags = existingTags.map(t => t.toLowerCase());
     const duplicateTags = tags.filter(t => existingTags.indexOf(t.toLowerCase()) > -1);
@@ -266,31 +256,45 @@ export class IngestComponent implements OnInit {
         await this.dbService.deleteTag({ name: t });
       }
     }
+  }
 
+  async importSelectedTagsFromFile(filename: string, tags: string[]) {
+
+    this.running = true;
+    this.status = ['Checking tags..'];
+    await this.deleteTags(tags);
     const tagSet = new Set(tags);
     this.status = ['Reading file...'];
     let total = 0;
     let matching = 0;
-    this.getObjectsFromFile(filename).subscribe(async providersInFile => {
-      const providersMatchingTag = providersInFile.filter(m => tagSet.has(m.Tag));
-      total += providersInFile.length;
-      matching += providersMatchingTag.length;
-      this.ngZone.run(async () => {
-        this.status[1] = `${total} total providers`;
-        this.status[2] = `${matching} providers for selected tags`;
-      });
-      for (const p of providersMatchingTag) {
-        try {
-          await this.addProviderDetailsToDatabase(p, p.Tag);
-        } catch (e) {
-          this.ngZone.run(() => this.status[3] = e);
+    this.getObjectsFromFile(filename).pipe(
+      // The async operation must happen inside of concatMap instead of subscribe, so that
+      // we wait for the operation to complete before processing the next item. Otherwise,
+      // we have multiple threads adding information to the database at the same time, and
+      // disk continues to show high activity for minutes after we report done, while the
+      // database tries to catch up.
+      concatMap(async providersInFile => {
+        const providersMatchingTag = providersInFile.filter(m => tagSet.has(m.Tag));
+        total += providersInFile.length;
+        matching += providersMatchingTag.length;
+        this.ngZone.run(async () => {
+          this.status[1] = `${total} total providers`;
+          this.status[2] = `${matching} providers for selected tags`;
+        });
+        for (const p of providersMatchingTag) {
+          try {
+            await this.addProviderDetailsToDatabase(p, p.Tag);
+          } catch (e) {
+            this.ngZone.run(() => this.status[3] = e);
+          }
         }
-      }
-    },
-      err => this.ngZone.run(() => this.status[3] = err),
-      () => {
-        this.ngZone.run(() => this.status.push('Done!'));
-      });
+      })
+    )
+      .subscribe(() => { },
+        err => this.ngZone.run(() => this.status[3] = err),
+        () => {
+          this.ngZone.run(() => this.status.push('Done!'));
+        });
   }
 
   onScrollBar(newPosition: number) {
