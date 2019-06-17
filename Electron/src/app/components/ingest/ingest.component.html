@@ -67,6 +67,8 @@
   <div class="button-area" *ngIf="checkboxNames">
     <button *ngIf="allSelected" (click)="deselectAll()">Deselect All</button>
     <button *ngIf="!allSelected" (click)="selectAll()">Select All</button>
+    <button *ngIf="ignoreOSProviders" (click)="ignoreOSProviders = false">Don't Ignore OS Providers</button>
+    <button *ngIf="!ignoreOSProviders" (click)="ignoreOSProviders = true">Ignore OS Providers</button>
   </div>
   <div class="scrollable-area">
     <div #providersDiv class="providers-container" [formGroup]="form" [scrollTop]="scrollTop" (wheel)="onWheel($event, providersDiv)">

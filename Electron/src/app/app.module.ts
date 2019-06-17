@@ -28,6 +28,7 @@ import { EventTableComponent } from './components/event-table/event-table.compon
 import { FilterPaneComponent } from './components/filterpane/filterpane.component';
 import { FilterComponent } from './components/filter/filter.component';
 import { TagsmodalComponent } from './components/tagsmodal/tagsmodal.component';
+import { OSProvidersService } from './providers/osproviders.service';
 
 // AoT requires an exported function for factories
 export function HttpLoaderFactory(http: HttpClient) {
@@ -61,7 +62,7 @@ export function HttpLoaderFactory(http: HttpClient) {
     }),
     ReactiveFormsModule
   ],
-  providers: [ElectronService, EventLogService, EventUtils, DatabaseService],
+  providers: [ElectronService, EventLogService, EventUtils, DatabaseService, OSProvidersService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }

@@ -6,6 +6,7 @@ import { FormGroup, AbstractControl, FormControl } from '@angular/forms';
 import { Message, ProviderEvent, ProviderValueName } from '../../providers/database.models';
 import { Observable } from 'rxjs';
 import { concatMap } from 'rxjs/operators';
+import { OSProvidersService } from '../../providers/osproviders.service';
 
 @Component({
   selector: 'app-ingest',
@@ -22,6 +23,7 @@ export class IngestComponent implements OnInit {
   providerNames: string[];
   checkboxNames: string[];
   running: boolean;
+  public ignoreOSProviders = false;
   importServerTag: string;
   importFileName: string;
   exportFileName: string;
@@ -39,6 +41,7 @@ export class IngestComponent implements OnInit {
   addTasksFunc: (items: any[]) => Promise<void>;
 
   constructor(
+    private osProvidersService: OSProvidersService,
     private eventutils: EventUtils,
     private dbService: DatabaseService,
     private electronService: ElectronService,
@@ -81,7 +84,10 @@ export class IngestComponent implements OnInit {
     this.running = true;
     this.status = [];
 
-    const selectedProviderNames = this.providerNames.filter(n => this.form.controls[n].value);
+    let selectedProviderNames = this.providerNames.filter(n => this.form.controls[n].value);
+    if (this.ignoreOSProviders) {
+      selectedProviderNames = selectedProviderNames.filter(p => !this.osProvidersService.providerNames.has(p.toUpperCase()));
+    }
     this.status.push(`Providers: 0/${selectedProviderNames.length} `);
 
     let providerCount = 0;
@@ -192,7 +198,11 @@ export class IngestComponent implements OnInit {
 
     this.status = [];
 
-    const selectedProviderNames = this.providerNames.filter(n => this.form.controls[n].value);
+    let selectedProviderNames = this.providerNames.filter(n => this.form.controls[n].value);
+    if (this.ignoreOSProviders) {
+      selectedProviderNames = selectedProviderNames.filter(p => !this.osProvidersService.providerNames.has(p.toUpperCase()));
+    }
+
     this.status.push(`Providers: ${selectedProviderNames.length} `);
 
     let providerCount = 0;
@@ -274,6 +284,9 @@ export class IngestComponent implements OnInit {
       // disk continues to show high activity for minutes after we report done, while the
       // database tries to catch up.
       concatMap(async providersInFile => {
+        if (this.ignoreOSProviders) {
+          providersInFile = providersInFile.filter(p => !this.osProvidersService.providerNames.has(p.ProviderName.toUpperCase()));
+        }
         const providersMatchingTag = providersInFile.filter(m => tagSet.has(m.Tag));
         total += providersInFile.length;
         matching += providersMatchingTag.length;
