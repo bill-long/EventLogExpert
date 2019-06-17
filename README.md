@@ -4,7 +4,12 @@ A Windows Event Log viewer for IT professionals and power users.
 
 ## Build status
 
-[![Build Status](https://exchangeeeteam.visualstudio.com/EventLogExpert/_apis/build/status/EventLogExpert-CI)](https://exchangeeeteam.visualstudio.com/EventLogExpert/_build/latest?definitionId=9)
+[![Build Status](https://dev.azure.com/amon/EventLogExpert/_apis/build/status/bill-long.EventLogExpert?branchName=master)](https://dev.azure.com/amon/EventLogExpert/_build/latest?definitionId=5&branchName=master)
+
+## Dependencies
+
+* [.NET 4.7.2](https://support.microsoft.com/en-us/help/4054531/microsoft-net-framework-4-7-2-web-installer-for-windows)
+* [Visual Studio 2015 C++ Redistributable](https://www.microsoft.com/en-us/download/details.aspx?id=48145)
 
 ## Contributing
 
