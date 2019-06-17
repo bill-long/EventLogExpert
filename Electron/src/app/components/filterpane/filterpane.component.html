@@ -1,10 +1,10 @@
 <div class="filters" *ngIf="form" [formGroup]="form">
-  <app-filter [title]="'Sources'" [form]="sources" [filter]="(eventLogService.state$ | async)?.filter?.providerFilter" [controlType]="'checkbox'"></app-filter>
-  <app-filter [title]="'Categories'" [form]="tasks" [filter]="(eventLogService.state$ | async)?.filter?.taskFilter" [controlType]="'checkbox'"></app-filter>
-  <app-filter [title]="'Event IDs'" [form]="ids" [filter]="(eventLogService.state$ | async)?.filter?.idFilter" [controlType]="'checkbox'"></app-filter>
+  <app-filter [title]="'Sources'" [form]="sources" [filter]="sourcesFilter" [controlType]="'checkbox'"></app-filter>
+  <app-filter [title]="'Categories'" [form]="tasks" [filter]="tasksFilter" [controlType]="'checkbox'"></app-filter>
+  <app-filter [title]="'Event IDs'" [form]="ids" [filter]="idsFilter" [controlType]="'checkbox'"></app-filter>
   <div class="stacked-filters">
-    <app-filter [title]="'Severity'" [form]="levels" [filter]="(eventLogService.state$ | async)?.filter?.levelFilter" [controlType]="'checkbox'"></app-filter>
-    <app-filter class="flex-one" [title]="'Description'" [form]="description" [filter]="(eventLogService.state$ | async)?.filter?.descriptionFilter"
+    <app-filter [title]="'Severity'" [form]="levels" [filter]="levelsFilter" [controlType]="'checkbox'"></app-filter>
+    <app-filter class="flex-one" [title]="'Description'" [form]="description" [filter]="descriptionFilter"
       [controlType]="['textarea', 'checkbox', 'checkbox']"></app-filter>
   </div>
   <div class="button-div">

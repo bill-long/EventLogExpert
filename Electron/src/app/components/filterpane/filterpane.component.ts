@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { EventLogService, FilterEventsAction, EventFilter, getFilterFunction, FocusEventAction } from '../../providers/eventlog.service';
-import { takeUntil, distinctUntilChanged, take } from 'rxjs/operators';
+import { takeUntil, distinctUntilChanged, take, map } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { FormGroup, AbstractControl, FormControl } from '@angular/forms';
 
@@ -21,7 +21,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
   description: FormGroup;
   recentFilters: { filter: string, readableFilter: string }[];
 
-  constructor(private eventLogService: EventLogService) {
+  constructor(public eventLogService: EventLogService) {
     const savedFiltersString = localStorage.getItem('savedFilters');
     if (savedFiltersString) {
       this.recentFilters = JSON.parse(savedFiltersString);
@@ -29,6 +29,46 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
     } else {
       this.recentFilters = [];
     }
+  }
+
+  get sourcesFilter() {
+    return this.eventLogService.state$.pipe(map(s => {
+      if (this.sources.pristine) {
+        return s.filter || s.filter.sources;
+      }
+    }));
+  }
+
+  get tasksFilter() {
+    return this.eventLogService.state$.pipe(map(s => {
+      if (this.tasks.pristine) {
+        return s.filter || s.filter.tasks;
+      }
+    }));
+  }
+
+  get idsFilter() {
+    return this.eventLogService.state$.pipe(map(s => {
+      if (this.ids.pristine) {
+        return s.filter || s.filter.ids;
+      }
+    }));
+  }
+
+  get levelsFilter() {
+    return this.eventLogService.state$.pipe(map(s => {
+      if (this.levels.pristine) {
+        return s.filter || s.filter.levels;
+      }
+    }));
+  }
+
+  get descriptionFilter() {
+    return this.eventLogService.state$.pipe(map(s => {
+      if (this.description.pristine) {
+        return s.filter || s.filter.description;
+      }
+    }));
   }
 
   applyFilter(filter: EventFilter) {
