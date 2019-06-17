@@ -37,11 +37,11 @@ export class FilterComponent implements OnInit {
   onWheel(w: WheelEvent, div: HTMLElement) {
     if (w && (this.lastWheelMove === null || this.lastWheelMove !== w.timeStamp)) {
       this.lastWheelMove = w.timeStamp;
-      if (w.deltaY < 0) {
+      if (w.deltaY > 0) {
         if (div.clientHeight + this.scrollTop < div.scrollHeight) {
           this.scrollTop = this.scrollTop + 20;
         }
-      } else if (w.deltaY > 0 && this.scrollTop > 0) {
+      } else if (w.deltaY < 0) {
         this.scrollTop = this.scrollTop - 20;
         if (this.scrollTop < 0) {
           this.scrollTop = 0;
