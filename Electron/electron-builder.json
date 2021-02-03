@@ -21,7 +21,7 @@
   ],
   "win": {
     "extraResources": [
-      "./eventutils"
+      "./eventutils/*"
     ],
     "icon": "dist",
     "target": [
