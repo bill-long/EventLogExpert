@@ -290,7 +290,7 @@ export class EventLogService {
         }
 
         let results: ProviderValueName[] = [];
-        
+
         // If we didn't get passed an array, make it one
         if (!(values instanceof Array)) {
             values = [values];
@@ -528,6 +528,12 @@ export class FocusEventAction {
     constructor(public e: EventRecord) { }
 }
 
+export class ClearFocusedEventAction {
+    type = 'CLEAR_FOCUSED_EVENT';
+
+    constructor() { }
+}
+
 export class SelectEventAction {
     type = 'SELECT_EVENT';
 
@@ -547,6 +553,7 @@ export type Action =
     FilterEventsFinishedAction |
     FinishedLoadingAction |
     FocusEventAction |
+    ClearFocusedEventAction |
     LoadActiveLogAction |
     LoadLogFromFileAction |
     SelectEventAction |
@@ -685,6 +692,20 @@ const reducer = (state: State, action: Action): State => {
                 recordsFiltered: state.recordsFiltered,
                 focusedEvent: thisAction.e,
                 selectedEvents: [thisAction.e],
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
+            };
+        }
+        case 'CLEAR_FOCUSED_EVENT': {
+            const thisAction = action as FocusEventAction;
+            return {
+                loading: state.loading,
+                name: state.name,
+                records: state.records,
+                recordsFiltered: state.recordsFiltered,
+                focusedEvent: null,
+                selectedEvents: state.selectedEvents,
                 filter: state.filter,
                 sort: state.sort,
                 uniqueRecordValues: state.uniqueRecordValues

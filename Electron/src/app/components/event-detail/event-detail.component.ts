@@ -3,7 +3,7 @@ import { EventRecord } from '../../providers/eventlog.models';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil, map, distinctUntilChanged, take } from 'rxjs/operators';
-import { EventLogService, getEventXml } from '../../providers/eventlog.service';
+import { ClearFocusedEventAction, EventLogService, getEventXml } from '../../providers/eventlog.service';
 import { ElectronService } from '../../providers/electron.service';
 
 @Component({
@@ -36,6 +36,10 @@ export class EventDetailComponent implements AfterViewInit, OnDestroy {
     this.focusedEvent$ = eventLogService.state$.pipe(map(s => s.focusedEvent), distinctUntilChanged(), takeUntil(this.ngUnsubscribe));
     this.description$ = this.focusedEvent$.pipe(map(e => this.getDescriptionHtml(e)));
     this.eventXml$ = this.focusedEvent$.pipe(map(e => getEventXml(e, eventLogService)));
+  }
+
+  close() {
+    this.eventLogService.actions$.next(new ClearFocusedEventAction());
   }
 
   copyToClipboard(includeXml: boolean) {
