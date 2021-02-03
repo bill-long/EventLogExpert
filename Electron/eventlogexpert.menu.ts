@@ -19,7 +19,7 @@ export class EventLogExpertMenu {
     menuBar.append(this.getFileMenu());
     menuBar.append(this.getEditMenu());
     // if (isDev) {
-      menuBar.append(this.getViewMenu());
+    menuBar.append(this.getViewMenu());
     // }
 
     // And finally set it on the app
@@ -32,9 +32,9 @@ export class EventLogExpertMenu {
 
     if (isDev) {
       editMenu.append(new MenuItem({ role: 'paste' }));
-      editMenu.append(new MenuItem({ role: 'pasteandmatchstyle' }));
+      editMenu.append(new MenuItem({ role: 'pasteAndMatchStyle' }));
       editMenu.append(new MenuItem({ role: 'delete' }));
-      editMenu.append(new MenuItem({ role: 'selectall' }));
+      editMenu.append(new MenuItem({ role: 'selectAll' }));
     }
 
     const edit = new MenuItem({ label: '&Edit', submenu: editMenu });
@@ -44,8 +44,8 @@ export class EventLogExpertMenu {
   private getFileMenu() {
 
     const fileMenu = new Menu();
-    fileMenu.append(new MenuItem({ label: 'Open Event Log File', click: (m, w, e) => this.openLogFromFile(m, w, e) }));
-    fileMenu.append(new MenuItem({ label: 'Manage Providers', click: (m, w, e) => this.ingestProviders(m, w, e) }));
+    fileMenu.append(new MenuItem({ label: 'Open Event Log File', click: (m, w, e) => this.openLogFromFile(m, w) }));
+    fileMenu.append(new MenuItem({ label: 'Manage Providers', click: (m, w, e) => this.ingestProviders(m, w) }));
     const file = new MenuItem({ label: '&File', submenu: fileMenu });
     return file;
   }
@@ -55,12 +55,12 @@ export class EventLogExpertMenu {
     const viewMenu = new Menu();
 
     viewMenu.append(new MenuItem({ role: 'reload' }));
-    viewMenu.append(new MenuItem({ role: 'forcereload' }));
-    viewMenu.append(new MenuItem({ role: 'toggledevtools' }));
+    viewMenu.append(new MenuItem({ role: 'forceReload' }));
+    viewMenu.append(new MenuItem({ role: 'toggleDevTools' }));
     viewMenu.append(new MenuItem({ type: 'separator' }));
-    viewMenu.append(new MenuItem({ role: 'resetzoom' }));
-    viewMenu.append(new MenuItem({ role: 'zoomin' }));
-    viewMenu.append(new MenuItem({ role: 'zoomout' }));
+    viewMenu.append(new MenuItem({ role: 'resetZoom' }));
+    viewMenu.append(new MenuItem({ role: 'zoomIn' }));
+    viewMenu.append(new MenuItem({ role: 'zoomOut' }));
     viewMenu.append(new MenuItem({ type: 'separator' }));
     viewMenu.append(new MenuItem({ role: 'togglefullscreen' }));
 
@@ -68,7 +68,7 @@ export class EventLogExpertMenu {
     return view;
   }
 
-  private ingestProviders(menuItem, window: BrowserWindow, ev: Event) {
+  private ingestProviders(menuItem, window: BrowserWindow) {
     const ingestWindow = new BrowserWindow({ modal: false, show: false, width: 1024, height: 768, autoHideMenuBar: true });
     // ingestWindow.setMenu(null);
     if (this.windowManager.isServing()) {
@@ -87,7 +87,7 @@ export class EventLogExpertMenu {
     ingestWindow.once('ready-to-show', () => ingestWindow.show());
   }
 
-  private openLogFromFile(menuItem: MenuItem, window: BrowserWindow, ev: Event) {
+  private openLogFromFile(menuItem: MenuItem, window: BrowserWindow) {
 
     const options: OpenDialogOptions = {
       properties: ['openFile', 'multiSelections'],
@@ -96,15 +96,16 @@ export class EventLogExpertMenu {
       ]
     };
 
-    const files = dialog.showOpenDialog(window, options);
-    if (!files || !files.length) { return; }
+    const files = dialog.showOpenDialog(window, options).then(files => {
+      if (!files || !files.filePaths) { return; }
 
-    if (!this.windowManager.hasOpenLog(window)) {
-      this.windowManager.setOpenLog(window, files[0]);
-      window.webContents.send('openLogFromFile', files[0], null);
-    } else {
-      const newWindow = this.windowManager.createWindow(files[0]);
-    }
+      if (!this.windowManager.hasOpenLog(window)) {
+        this.windowManager.setOpenLog(window, files.filePaths[0]);
+        window.webContents.send('openLogFromFile', files.filePaths[0], null);
+      } else {
+        const newWindow = this.windowManager.createWindow(files.filePaths[0]);
+      }
+    });
   }
 
 }

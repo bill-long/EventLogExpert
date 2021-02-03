@@ -22,6 +22,7 @@ export class EventLogExpertWindowManager {
             width: size.width,
             height: size.height,
             webPreferences: {
+                enableRemoteModule: true,
                 nodeIntegration: true
             }
         });

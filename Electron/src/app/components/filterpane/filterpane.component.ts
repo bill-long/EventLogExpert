@@ -131,7 +131,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
     this.applyFilter(filter);
   }
 
-  findNext(filterString: string) {
+  findNext(filterString?: string) {
     const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
     this.addToRecentFilters(filter, false);
     const func = getFilterFunction(filter, this.eventLogService);
@@ -146,7 +146,7 @@ export class FilterPaneComponent implements OnInit, OnDestroy {
     });
   }
 
-  findPrevious(filterString: string) {
+  findPrevious(filterString?: string) {
     const filter = filterString ? this.unstringifyFilter(filterString) : this.getFormFilter();
     this.addToRecentFilters(filter, false);
     const func = getFilterFunction(filter, this.eventLogService);
