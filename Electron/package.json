@@ -2,7 +2,7 @@
   "name": "eventlogexpert",
   "version": "0.9.4",
   "author": {
-    "name": "Microsoft"
+    "name": "Bill Long"
   },
   "main": "main.js",
   "private": true,
