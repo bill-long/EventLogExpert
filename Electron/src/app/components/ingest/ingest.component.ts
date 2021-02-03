@@ -334,21 +334,23 @@ export class IngestComponent implements OnInit {
     this.electronService
       .remote
       .dialog
-      .showOpenDialog({ filters: [{ name: 'EventLogExpert Export File', extensions: ['json'] }] }, filenames => {
-        if (filenames && filenames.length > 0) {
+      .showOpenDialog(null, { filters: [{ name: 'EventLogExpert Export File', extensions: ['json'] }] })
+      .then(returnValue => {
+        if (returnValue.filePaths && returnValue.filePaths.length > 0) {
           this.ngZone.run(() => {
-            this.importFileName = filenames[0];
+            this.importFileName = returnValue.filePaths[0];
           });
         }
       });
   }
 
   selectExportFile() {
-    this.electronService.remote.dialog.showSaveDialog({}, filename => {
-      this.ngZone.run(() => {
-        this.exportFileName = filename;
+    this.electronService.remote.dialog.showSaveDialog({})
+      .then(retValue => {
+        this.ngZone.run(() => {
+          this.exportFileName = retValue.filePath;
+        });
       });
-    });
   }
 
   setActiveTab(tabName: string) {

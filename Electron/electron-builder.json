@@ -1,12 +1,11 @@
 {
   "productName": "eventlogexpert",
   "directories": {
-    "output": "app-builds"
+    "output": "release/"
   },
   "files": [
     "**/*",
-    "!*.psd",
-    "!*.ts",
+    "!**/*.ts",
     "!*.code-workspace",
     "!LICENSE.md",
     "!package.json",
@@ -14,7 +13,7 @@
     "!src/",
     "!e2e/",
     "!hooks/",
-    "!.angular-cli.json",
+    "!angular.json",
     "!_config.yml",
     "!karma.conf.js",
     "!tsconfig.json",
