@@ -23,5 +23,5 @@ steps:
     GH_TOKEN: $(GH_TOKEN)
   inputs:
     command: 'custom'
-    customCommand: 'run build:prod'
+    customCommand: 'run publish'
     workingDir: 'Electron'
