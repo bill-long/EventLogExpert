@@ -3,6 +3,7 @@ import { EventLogExpertWindowManager } from './eventlogexpert.windowmanager';
 import * as isDev from 'electron-is-dev';
 import * as url from 'url';
 import * as path from 'path';
+import * as log from 'electron-log';
 
 export class EventLogExpertMenu {
 
@@ -112,7 +113,8 @@ export class EventLogExpertMenu {
     };
 
     const files = dialog.showOpenDialog(window, options).then(files => {
-      if (!files || !files.filePaths) { return; }
+      log.info("Open file dialog result", files);
+      if (!files || files.canceled || files.filePaths.length < 1) { return; }
 
       if (!this.windowManager.hasOpenLog(window)) {
         this.windowManager.setOpenLog(window, files.filePaths[0]);
