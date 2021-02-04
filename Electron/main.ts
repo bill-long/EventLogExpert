@@ -3,6 +3,7 @@ import { autoUpdater } from 'electron-updater';
 import { EventLogExpertMenu } from './eventlogexpert.menu';
 import { EventLogExpertWindowManager } from './eventlogexpert.windowmanager';
 import * as log from 'electron-log';
+import { electron } from 'process';
 
 let serve;
 const args = process.argv.slice(1);
@@ -18,8 +19,9 @@ try {
     app.quit();
   } else {
     app.on('second-instance', (event, commandLine, workingDirectory) => {
-      if (commandLine.length >= 2) {
-        const newWindow = windowManager.createWindow(commandLine[1]);
+      log.info(commandLine);
+      if (commandLine.length >= 3) {
+        const newWindow = windowManager.createWindow(commandLine[2]);
       } else {
         windowManager.focus();
       }

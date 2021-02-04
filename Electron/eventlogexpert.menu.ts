@@ -69,7 +69,22 @@ export class EventLogExpertMenu {
   }
 
   private ingestProviders(menuItem, window: BrowserWindow) {
-    const ingestWindow = new BrowserWindow({ modal: false, show: false, width: 1024, height: 768, autoHideMenuBar: true });
+    const ingestWindow = new BrowserWindow({
+      modal: false,
+      show: false,
+      width: 1024,
+      height: 768,
+      autoHideMenuBar: true,
+      webPreferences: {
+        enableRemoteModule: true,
+        nodeIntegration: true
+      }
+    });
+
+    if (isDev) {
+      ingestWindow.webContents.openDevTools();
+    }
+
     // ingestWindow.setMenu(null);
     if (this.windowManager.isServing()) {
       require('electron-reload')(__dirname, {
