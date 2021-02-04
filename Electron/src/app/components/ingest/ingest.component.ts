@@ -2,7 +2,7 @@ import { Component, OnInit, ViewEncapsulation, NgZone, isDevMode } from '@angula
 import { EventUtils, ProviderDetails } from '../../providers/eventutils.service';
 import { DatabaseService } from '../../providers/database.service';
 import { ElectronService } from '../../providers/electron.service';
-import { FormGroup, AbstractControl, FormControl } from '@angular/forms';
+import { FormGroup, FormControl } from '@angular/forms';
 import { Message, ProviderEvent, ProviderValueName } from '../../providers/database.models';
 import { Observable } from 'rxjs';
 import { concatMap } from 'rxjs/operators';
@@ -361,9 +361,10 @@ export class IngestComponent implements OnInit {
   }
 
   setFormNames(names: string[]) {
-    const checkboxes: { [key: string]: AbstractControl } = {};
-    names.forEach(n => checkboxes[`${n}`] = new FormControl(true));
-    this.form = new FormGroup(checkboxes);
+    Object.getOwnPropertyNames(this.form.controls).forEach(n => this.form.removeControl(n));
+    names.forEach(n => {
+      this.form.addControl(n, new FormControl(true));
+    });
     this.checkboxNames = names;
     this.allSelected = true;
   }
