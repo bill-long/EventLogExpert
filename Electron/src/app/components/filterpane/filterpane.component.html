@@ -4,8 +4,7 @@
   <app-filter [title]="'Event IDs'" [form]="ids" [filter]="idsFilter" [controlType]="'checkbox'"></app-filter>
   <div class="stacked-filters">
     <app-filter [title]="'Severity'" [form]="levels" [filter]="levelsFilter" [controlType]="'checkbox'"></app-filter>
-    <app-filter class="flex-one" [title]="'Description'" [form]="description" [filter]="descriptionFilter"
-      [controlType]="['textarea', 'checkbox', 'checkbox']"></app-filter>
+    <app-filter class="flex-one" [title]="'Description'" [form]="description" [filter]="descriptionFilter" [controlType]="['textarea', 'checkbox', 'checkbox']"></app-filter>
   </div>
   <div class="button-div">
     <button (click)="applyCurrentFilter()">Apply Filter</button>
@@ -16,7 +15,7 @@
   <div class="recent-filters" *ngIf="recentFilters && recentFilters.length">
     <div class="recent-filters-title" *ngIf="recentFilters[0]">Current Filter</div>
     <input readonly type="text" title="{{recentFilters[0].readableFilter}}" *ngIf="recentFilters[0]" value="{{recentFilters[0].filter}}" />
-    <div class="recent-filters-title">Recent Filters</div>
+    <div class="recent-filters-title">Filter History</div>
     <div class="recent-filter" *ngFor="let filter of recentFilters | slice:1">
       <input readonly type="text" title="{{filter.readableFilter}}" value="{{filter.filter}}" />
       <button (click)="applySavedFilter(filter.filter)">Apply</button>
