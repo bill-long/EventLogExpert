@@ -1,7 +1,7 @@
 import { Component, OnInit, AfterViewInit, HostListener, ChangeDetectionStrategy, ElementRef } from '@angular/core';
-import { EventRecord } from '../../providers/eventlog.models';
+import { EventRecord } from '../../providers/eventlog/eventlog.models';
 import { Subject, Observable, combineLatest } from 'rxjs';
-import { EventLogService, State, FocusEventAction, SelectEventAction, ShiftSelectEventAction } from '../../providers/eventlog.service';
+import { EventLogService, State, FocusEventAction, SelectEventAction, ShiftSelectEventAction } from '../../providers/eventlog/eventlog';
 import { takeUntil, withLatestFrom } from 'rxjs/operators';
 
 @Component({
@@ -73,7 +73,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
             this.updateVisibleRecords(s, 0, false);
           }
         }),
-    );
+      );
 
     // For window resize, update the rowsInView in case of another view change
     this.windowResize$

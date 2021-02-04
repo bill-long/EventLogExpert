@@ -1,7 +1,7 @@
 import { Component, ChangeDetectionStrategy, AfterViewInit, HostListener } from '@angular/core';
 import { Observable, Subject, ReplaySubject } from 'rxjs';
-import { EventLogService, State } from '../../providers/eventlog.service';
-import { EventRecord } from '../../providers/eventlog.models';
+import { EventLogService, State } from '../../providers/eventlog/eventlog';
+import { EventRecord } from '../../providers/eventlog/eventlog.models';
 
 @Component({
   selector: 'app-home',

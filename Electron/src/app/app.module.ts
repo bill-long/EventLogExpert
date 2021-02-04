@@ -18,7 +18,7 @@ import { WebviewDirective } from './directives/webview.directive';
 
 import { AppComponent } from './app.component';
 import { HomeComponent } from './components/home/home.component';
-import { EventLogService } from './providers/eventlog.service';
+import { EventLogService } from './providers/eventlog/eventlog.service';
 import { EventUtils } from './providers/eventutils.service';
 import { DatabaseService } from './providers/database.service';
 import { ScrollbarComponent } from './components/scrollbar/scrollbar.component';
