@@ -29,7 +29,7 @@ export class IngestComponent implements OnInit {
   exportFileName: string;
   importServerName: string;
   exportServerName: string;
-  form: FormGroup;
+  form: FormGroup = new FormGroup({});
   allSelected: boolean;
   lastWheelMove: number;
   activeTab: string;
