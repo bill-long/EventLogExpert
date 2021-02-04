@@ -1,9 +1,9 @@
 import { Component, Input, ElementRef, AfterViewInit, HostListener, OnChanges, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
-import { EventRecord } from '../../providers/eventlog.models';
+import { EventRecord } from '../../providers/eventlog/eventlog.models';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Observable, Subject } from 'rxjs';
 import { takeUntil, map, distinctUntilChanged, take } from 'rxjs/operators';
-import { ClearFocusedEventAction, EventLogService, getEventXml } from '../../providers/eventlog.service';
+import { EventLogService, ClearFocusedEventAction, getEventXml } from '../../providers/eventlog/eventlog';
 import { ElectronService } from '../../providers/electron.service';
 
 @Component({

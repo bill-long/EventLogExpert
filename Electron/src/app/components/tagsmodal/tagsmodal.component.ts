@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { DatabaseService } from '../../providers/database.service';
 import { Observable } from 'rxjs';
 import { ElectronService } from '../../providers/electron.service';
-import { EventLogService, LoadLogFromFileAction } from '../../providers/eventlog.service';
+import { EventLogService, LoadLogFromFileAction } from '../../providers/eventlog/eventlog';
 import * as moment from 'moment-timezone';
 
 @Component({
@@ -46,10 +46,10 @@ export class TagsmodalComponent implements OnInit {
     this.tags$ = dbService.tagsByPriority$;
     this.tags$.subscribe(t => this.displayedTags = [...t]);
     electronSvc.ipcRenderer.on('openLogFromFile',
-    (ev, file) => {
-      this.visible = true;
-      this.onSave = () => this.eventLogService.actions$.next(new LoadLogFromFileAction(file));
-    });
+      (ev, file) => {
+        this.visible = true;
+        this.onSave = () => this.eventLogService.actions$.next(new LoadLogFromFileAction(file));
+      });
   }
 
   moveDown(tag: string) {

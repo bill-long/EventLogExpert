@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-import { EventLogService, FilterEventsAction, EventFilter, getFilterFunction, FocusEventAction } from '../../providers/eventlog.service';
+import { EventLogService, FilterEventsAction, EventFilter, getFilterFunction, FocusEventAction } from '../../providers/eventlog/eventlog';
 import { takeUntil, distinctUntilChanged, take, map } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { FormGroup, AbstractControl, FormControl } from '@angular/forms';
