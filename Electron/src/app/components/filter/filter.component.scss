@@ -15,7 +15,7 @@
 .filter-content {
     display: flex;
     flex-direction: row;
-    height: 100%;
+    max-height: 263px;
 }
 
 .filter-items {
@@ -35,4 +35,8 @@ button {
 
 input {
     margin-left: 0px;
+}
+
+textarea {
+    max-width: 90%;
 }
