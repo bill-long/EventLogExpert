@@ -68,12 +68,14 @@ export class IngestComponent implements OnInit {
       }
     });
 
-    this.status.push('Writing messages...');
+    this.status.push('Local database export is disabled.');
+    return;
+
     let count = 0;
     this.dbService.getAllMessages$().subscribe(async m => {
       count += m.length;
       this.status[1] = `${count}`;
-      await this.writeObjectToFile(m, fileName);
+      await this.writeProviderToFile(null, fileName);
     },
       err => this.status[2] = `${err}`,
       () => this.status[3] = 'Done!');
@@ -111,7 +113,7 @@ export class IngestComponent implements OnInit {
           (results as any).Tag = tag;
           this.status[0] = `Providers: ${providerCount += 1}/${selectedProviderNames.length}`;
           this.status[2] = 'Writing provider details to file...';
-          await this.writeObjectToFile(results, fileName);
+          await this.writeProviderToFile(results, fileName);
         }
       }
     }
@@ -381,7 +383,7 @@ export class IngestComponent implements OnInit {
     controlNames.forEach(c => this.form.controls[c].setValue(true));
   }
 
-  private async writeObjectToFile(m, fileName: string) {
+  private async writeProviderToFile(m: ProviderDetails, fileName: string) {
     const writeString = JSON.stringify(m) + '\n';
     await this.electronService.fs.appendFile(fileName, writeString, err => {
       if (err) {
