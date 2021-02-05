@@ -109,7 +109,7 @@ export class EventLogService {
     }
 
     getTemplate(r: EventRecord) {
-        const cachedEvent = this.getFromCache(this.messageCache, r.ProviderName, r.Id, r.LogName);
+        const cachedEvent = this.getFromCache(this.eventCache, r.ProviderName.toUpperCase(), r.Id, r.Version, r.LogName);
         if (cachedEvent) { return cachedEvent.Template; }
         return null;
     }
