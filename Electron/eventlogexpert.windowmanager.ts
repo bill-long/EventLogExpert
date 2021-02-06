@@ -70,7 +70,7 @@ export class EventLogExpertWindowManager {
     }
 
     public focus() {
-        const win = this.openWindows[0].window;
+        const win = this.openWindows[0]?.window;
         if (win) {
             if (win.isMinimized()) { win.restore(); }
             win.focus();
