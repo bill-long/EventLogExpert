@@ -57,7 +57,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
       .subscribe(
         (([[w], s]) => {
           if (s.recordsFiltered.length > 0) {
-            this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
+            this.rowsInView = Math.floor(this.ref.nativeElement.clientHeight / 19) - 2;
             let newRenderOffset = this.renderOffset;
             if (w && (this.lastWheelMove === null || this.lastWheelMove !== w.timeStamp)) {
               this.lastWheelMove = w.timeStamp;
@@ -79,7 +79,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
     this.windowResize$
       .pipe(takeUntil(this.ngUnsubscribe))
       .subscribe(() => {
-        this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
+        this.rowsInView = Math.floor(this.ref.nativeElement.clientHeight / 19) - 2;
       });
 
     // For arrow key navigation, we must bring the focused event into view
@@ -101,6 +101,14 @@ export class EventTableComponent implements AfterViewInit, OnInit {
             this.eventLogService.actions$.next(new FocusEventAction(v[focusedEventIndex - 1]));
           } else if (k.key === 'ArrowDown' && focusedEventIndex < v.length - 1) {
             this.eventLogService.actions$.next(new FocusEventAction(v[focusedEventIndex + 1]));
+          } else if (k.key === 'PageUp' && focusedEventIndex > 0) {
+            let currentFocusedIndex = s.recordsFiltered.indexOf(s.focusedEvent);
+            let newIndex = Math.max(0, currentFocusedIndex - this.rowsInView);
+            this.eventLogService.actions$.next(new FocusEventAction(s.recordsFiltered[newIndex]));
+          } else if (k.key === 'PageDown' && focusedEventIndex < v.length - 1) {
+            let currentFocusedIndex = s.recordsFiltered.indexOf(s.focusedEvent)
+            let newIndex = Math.min(s.recordsFiltered.length - 1, currentFocusedIndex + this.rowsInView);
+            this.eventLogService.actions$.next(new FocusEventAction(s.recordsFiltered[newIndex]));
           }
         }
       });
@@ -123,7 +131,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
 
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'PageDown' || e.key === 'PageUp') {
       this.arrowKeyNavigation.next(e);
     }
   }
@@ -186,12 +194,12 @@ export class EventTableComponent implements AfterViewInit, OnInit {
     }
 
     // Otherwise, more work to do
-    this.rowsInView = (this.ref.nativeElement.clientHeight / 19) - 2;
+    this.rowsInView = Math.floor(this.ref.nativeElement.clientHeight / 19) - 2;
     const focusedEventIndex = newSlice.indexOf(s.focusedEvent);
     if (focusedEventIndex === -1) {
-      const centerPosition = Math.floor(this.rowsInView / 2);
-      const newRenderOffset = s.recordsFiltered.indexOf(s.focusedEvent) - centerPosition;
-      this.renderOffset = newRenderOffset > 0 ? newRenderOffset : 0;
+      const newRenderOffset = Math.max(0, s.recordsFiltered.indexOf(s.focusedEvent) - 1);
+      console.log("new render offset", newRenderOffset);
+      this.renderOffset = newRenderOffset;
       newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
     } else if (focusedEventIndex > this.rowsInView) {
       const diff = focusedEventIndex - (this.rowsInView);
