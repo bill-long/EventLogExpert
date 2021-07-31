@@ -197,8 +197,11 @@ export class EventTableComponent implements AfterViewInit, OnInit {
     this.rowsInView = Math.floor(this.ref.nativeElement.clientHeight / 19) - 2;
     const focusedEventIndex = newSlice.indexOf(s.focusedEvent);
     if (focusedEventIndex === -1) {
-      const newRenderOffset = Math.max(0, s.recordsFiltered.indexOf(s.focusedEvent) - 1);
-      console.log("new render offset", newRenderOffset);
+      let newRenderOffset = Math.max(0, s.recordsFiltered.indexOf(s.focusedEvent) - 1);
+      if (newRenderOffset > this.renderOffset) {
+        newRenderOffset = newRenderOffset - this.rowsInView;
+      }
+
       this.renderOffset = newRenderOffset;
       newSlice = s.recordsFiltered.slice(this.renderOffset, this.renderOffset + 100);
     } else if (focusedEventIndex > this.rowsInView) {
