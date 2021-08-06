@@ -2,7 +2,7 @@ import { Component, OnInit, AfterViewInit, HostListener, ChangeDetectionStrategy
 import { EventRecord } from '../../providers/eventlog/eventlog.models';
 import { Subject, Observable, combineLatest } from 'rxjs';
 import { EventLogService, State, FocusEventAction, SelectEventAction, ShiftSelectEventAction } from '../../providers/eventlog/eventlog';
-import { takeUntil, withLatestFrom } from 'rxjs/operators';
+import { filter, takeUntil, throttleTime, withLatestFrom } from 'rxjs/operators';
 
 @Component({
   selector: 'app-event-table',
@@ -29,7 +29,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
   visibleRecords$ = new Subject<EventRecord[]>();
   rowsInView: number;
   ngUnsubscribe = new Subject<void>();
-  arrowKeyNavigation = new Subject<KeyboardEvent>();
+  keyNavigation = new Subject<KeyboardEvent>();
   windowResize$ = new Subject<void>();
   elementHeight: number;
 
@@ -83,10 +83,10 @@ export class EventTableComponent implements AfterViewInit, OnInit {
       });
 
     // For arrow key navigation, we must bring the focused event into view
-    this.arrowKeyNavigation
-      .pipe(
-        takeUntil(this.ngUnsubscribe),
-        withLatestFrom(this.state$, this.visibleRecords$))
+    let keyNavigationNoThrottle = this.keyNavigation.pipe( 
+      filter(k => k.key === 'ArrowUp' || k.key === 'ArrowDown'),
+      takeUntil(this.ngUnsubscribe),
+      withLatestFrom(this.state$, this.visibleRecords$))
       .subscribe(([k, s, v]) => {
         // Only act if there is a focused event
         if (s.focusedEvent) {
@@ -101,7 +101,26 @@ export class EventTableComponent implements AfterViewInit, OnInit {
             this.eventLogService.actions$.next(new FocusEventAction(v[focusedEventIndex - 1]));
           } else if (k.key === 'ArrowDown' && focusedEventIndex < v.length - 1) {
             this.eventLogService.actions$.next(new FocusEventAction(v[focusedEventIndex + 1]));
-          } else if (k.key === 'PageUp' && focusedEventIndex > 0) {
+          }
+        }
+      });;
+
+    let keyNavigationThrottled = this.keyNavigation.pipe(
+      filter(k => k.key === 'PageUp' || k.key === 'PageDown'),
+      throttleTime(100), 
+      takeUntil(this.ngUnsubscribe),
+      withLatestFrom(this.state$, this.visibleRecords$))
+      .subscribe(([k, s, v]) => {
+        // Only act if there is a focused event
+        if (s.focusedEvent) {
+          // If the focused event isn't visible, make it visible.
+          let focusedEventIndex = v.indexOf(s.focusedEvent);
+          if (focusedEventIndex < 0) {
+            focusedEventIndex = this.updateVisibleRecords(s, this.renderOffset, true);
+          }
+
+          // Now we can deal with the page key.
+          if (k.key === 'PageUp' && focusedEventIndex > 0) {
             let currentFocusedIndex = s.recordsFiltered.indexOf(s.focusedEvent);
             let newIndex = Math.max(0, currentFocusedIndex - this.rowsInView);
             this.eventLogService.actions$.next(new FocusEventAction(s.recordsFiltered[newIndex]));
@@ -111,7 +130,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
             this.eventLogService.actions$.next(new FocusEventAction(s.recordsFiltered[newIndex]));
           }
         }
-      });
+      });;
 
     // For state changes (records filtered, sorted, etc), bring focused event into view
     this.state$
@@ -132,7 +151,7 @@ export class EventTableComponent implements AfterViewInit, OnInit {
   @HostListener('window:keydown', ['$event'])
   onKeyDown(e: KeyboardEvent) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'PageDown' || e.key === 'PageUp') {
-      this.arrowKeyNavigation.next(e);
+      this.keyNavigation.next(e);
     }
   }
 
