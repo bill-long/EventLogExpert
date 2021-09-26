@@ -14,7 +14,9 @@
   <div class="detail-divider" (mousedown)="onDetailDividerMouseDown($event)"></div>
   <app-event-detail [hidden]="!state.focusedEvent" [ngStyle]="{ 'height': detailHeight + 'px' }" [heightChange$]="detailHeightChange$"></app-event-detail>
   <div class="status-bar">
-    <div *ngIf="state.records.length">Records: {{state.records.length}}</div>
+    <div *ngIf="state.records.length && state.records.length != state.count">Loaded: {{state.records.length}}</div>
     <div *ngIf="state.recordsFiltered.length">Visible: {{state.recordsFiltered.length}}</div>
+    <div>Start Offset: {{state.start}}</div>
+    <div>Event Count: {{state.count}}</div>
   </div>
 </div>

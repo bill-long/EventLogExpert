@@ -46,9 +46,14 @@ export class TagsmodalComponent implements OnInit {
     this.tags$ = dbService.tagsByPriority$;
     this.tags$.subscribe(t => this.displayedTags = [...t]);
     electronSvc.ipcRenderer.on('openLogFromFile',
-      (ev, file) => {
-        this.visible = true;
-        this.onSave = () => this.eventLogService.actions$.next(new LoadLogFromFileAction(file));
+      (ev, options: { file: string, start: number, count: number, tzName: string }) => {
+        if (!options.tzName) {
+          this.visible = true;
+          this.onSave = () => this.eventLogService.actions$.next(new LoadLogFromFileAction(options.file, options.start, options.count));
+        } else {
+          this.eventLogService.setTimeZone(options.tzName);
+          this.eventLogService.actions$.next(new LoadLogFromFileAction(options.file, options.start, options.count));
+        }
       });
   }
 

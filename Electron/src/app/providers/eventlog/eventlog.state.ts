@@ -1,13 +1,15 @@
 import { EventRecord } from './eventlog.models';
 import { EventLogService } from './eventlog.service';
 import { AppConfig } from '../../../environments/environment';
-import { Action, EventsLoadedAction, FilterEventsAction, FilterEventsFinishedAction, FinishedLoadingAction, FocusEventAction, LoadActiveLogAction, LoadLogFromFileAction, SelectEventAction, ShiftSelectEventAction } from './eventlog.actions';
+import { Action, EventsLoadedAction, FilterEventsAction, FilterEventsFinishedAction, FinishedLoadingAction, FocusEventAction, LoadActiveLogAction, LoadLogFromFileAction, SelectEventAction, ShiftSelectEventAction, UpdateCountAction } from './eventlog.actions';
 
 // State
 
 export interface State {
     loading: boolean;
     name: string;
+    start: number;
+    count: number;
     records: EventRecord[];
     recordsFiltered: EventRecord[];
     focusedEvent: EventRecord;
@@ -53,6 +55,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: false,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: [],
                 recordsFiltered: [],
                 focusedEvent: null,
@@ -68,6 +72,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: true,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: records,
                 recordsFiltered: records,
                 focusedEvent: state.focusedEvent,
@@ -82,6 +88,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: state.loading,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: state.records,
                 recordsFiltered: state.recordsFiltered,
                 focusedEvent: state.focusedEvent,
@@ -96,6 +104,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: state.loading,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: state.records,
                 recordsFiltered: thisAction.filteredRecords,
                 focusedEvent: state.focusedEvent,
@@ -125,6 +135,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: false,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: records,
                 recordsFiltered: records,
                 focusedEvent: state.focusedEvent,
@@ -143,6 +155,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: true,
                 name: thisAction.logName,
+                start: state.start,
+                count: state.count,
                 records: [],
                 recordsFiltered: [],
                 focusedEvent: state.focusedEvent,
@@ -157,6 +171,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: true,
                 name: thisAction.file,
+                start: thisAction.start,
+                count: thisAction.count,
                 records: [],
                 recordsFiltered: [],
                 focusedEvent: state.focusedEvent,
@@ -171,6 +187,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: state.loading,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: state.records,
                 recordsFiltered: state.recordsFiltered,
                 focusedEvent: thisAction.e,
@@ -185,6 +203,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: state.loading,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: state.records,
                 recordsFiltered: state.recordsFiltered,
                 focusedEvent: null,
@@ -203,6 +223,8 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: state.loading,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: state.records,
                 recordsFiltered: state.recordsFiltered,
                 focusedEvent: state.focusedEvent,
@@ -232,10 +254,28 @@ export const reducer = (state: State, action: Action): State => {
             return {
                 loading: state.loading,
                 name: state.name,
+                start: state.start,
+                count: state.count,
                 records: state.records,
                 recordsFiltered: state.recordsFiltered,
                 focusedEvent: state.focusedEvent,
                 selectedEvents: newSelectedEvents,
+                filter: state.filter,
+                sort: state.sort,
+                uniqueRecordValues: state.uniqueRecordValues
+            };
+        }
+        case 'UPDATE_COUNT': {
+            const thisAction = action as UpdateCountAction;
+            return {
+                loading: state.loading,
+                name: state.name,
+                start: state.start,
+                count: thisAction.c,
+                records: state.records,
+                recordsFiltered: state.recordsFiltered,
+                focusedEvent: state.focusedEvent,
+                selectedEvents: state.selectedEvents,
                 filter: state.filter,
                 sort: state.sort,
                 uniqueRecordValues: state.uniqueRecordValues

@@ -92,6 +92,35 @@ namespace EventLogExpert
             }));
         }
 
+        public Task<object> GetEventLogRecordCount(dynamic input)
+        {
+            var file = input.file;
+            var reader = new EventLogReader(file, PathType.FilePath);
+
+            // Seek until we get a null
+            int step = 100000;
+            int eventCount = 0;
+            while (null != (reader.ReadEvent()))
+            {
+                eventCount += step;
+                reader.Seek(0, eventCount);
+            }
+
+            if (eventCount > 0)
+            {
+                // We know the count is somewhere between eventCount and eventCount - step
+                // Set it to the start of that range and run forward until we find it
+                eventCount = eventCount - step;
+                reader.Seek(0, eventCount);
+                while (null != reader.ReadEvent())
+                {
+                    ++eventCount;
+                }
+            }
+
+            return Task.FromResult<object>(new { count = eventCount });
+        }
+
         /// <summary>
         /// Note this method is synchronous and must be called synchronously
         /// from NodeJS.
@@ -101,7 +130,12 @@ namespace EventLogExpert
         public Task<object> GetEventLogFileReader(dynamic input)
         {
             var file = input.file;
+            var start = input.start;
+            var maxRecordCount = input.count;
+            var totalReturned = 0;
             var reader = new EventLogReader(file, PathType.FilePath);
+            reader.Seek(0, start);
+
             var readComplete = false;
 
             // The delegate returned is async
@@ -113,10 +147,11 @@ namespace EventLogExpert
                 {
                     var count = 0;
                     var events = new List<object>();
-                    EventRecord evt;
-                    while (count < BatchSize && null != (evt = reader.ReadEvent()))
+                    EventRecord evt = null;
+                    while (count < BatchSize && totalReturned < maxRecordCount && null != (evt = reader.ReadEvent()))
                     {
                         count++;
+                        totalReturned++;
                         events.Add(new
                         {
                             evt.Id,
@@ -151,7 +186,7 @@ namespace EventLogExpert
                         return null;
                     }
 
-                    if (count < BatchSize)
+                    if (count < BatchSize || totalReturned >= maxRecordCount)
                     {
                         readComplete = true;
                         reader.Dispose();

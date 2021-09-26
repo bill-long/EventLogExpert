@@ -7,7 +7,7 @@ import * as log from 'electron-log';
 
 export class EventLogExpertMenu {
 
-  constructor(private windowManager: EventLogExpertWindowManager) {
+  constructor(private windowManager: EventLogExpertWindowManager, private maxEventsPerWindow: number) {
     this.createMenu();
   }
 
@@ -118,9 +118,9 @@ export class EventLogExpertMenu {
 
       if (!this.windowManager.hasOpenLog(window)) {
         this.windowManager.setOpenLog(window, files.filePaths[0]);
-        window.webContents.send('openLogFromFile', files.filePaths[0], null);
+        window.webContents.send('openLogFromFile', { file: files.filePaths[0], start: 0, count: this.maxEventsPerWindow, tzName: null });
       } else {
-        const newWindow = this.windowManager.createWindow(files.filePaths[0]);
+        const newWindow = this.windowManager.createWindow(files.filePaths[0], 0, this.maxEventsPerWindow, null);
       }
     });
   }

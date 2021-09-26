@@ -45,7 +45,7 @@ export class LoadActiveLogAction {
 export class LoadLogFromFileAction {
     type = 'LOAD_LOG_FROM_FILE';
 
-    constructor(public file: string) { }
+    constructor(public file: string, public start: number, public count: number) { }
 }
 
 export class FocusEventAction {
@@ -72,6 +72,12 @@ export class ShiftSelectEventAction {
     constructor(public e: EventRecord) { }
 }
 
+export class UpdateCountAction {
+    type = 'UPDATE_COUNT';
+
+    constructor(public c: number) { }
+}
+
 export type Action =
     ClearEventsAction |
     EventsLoadedAction |
@@ -83,4 +89,5 @@ export type Action =
     LoadActiveLogAction |
     LoadLogFromFileAction |
     SelectEventAction |
-    ShiftSelectEventAction;
+    ShiftSelectEventAction |
+    UpdateCountAction;
