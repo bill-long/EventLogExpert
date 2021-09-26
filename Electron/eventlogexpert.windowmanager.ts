@@ -1,4 +1,4 @@
-import { BrowserWindow, screen, app } from 'electron';
+import { BrowserWindow, screen, app, ipcMain } from 'electron';
 import * as isDev from 'electron-is-dev';
 import * as url from 'url';
 import * as path from 'path';
@@ -9,9 +9,12 @@ export class EventLogExpertWindowManager {
 
     constructor(private serve: boolean) {
         this.openWindows = [];
+        ipcMain.on('openPartialEventLog', (ev, args) => {
+            this.createWindow(args.file, args.start, args.count, args.tzName);
+        });
     }
 
-    public createWindow(log: string): BrowserWindow {
+    public createWindow(log: string, start: number, count: number, tzName: string): BrowserWindow {
         const electronScreen = screen;
         const size = electronScreen.getPrimaryDisplay().workAreaSize;
 
@@ -63,7 +66,7 @@ export class EventLogExpertWindowManager {
         this.openWindows.push({ window: win, openLog: log });
         if (log) {
             win.webContents.once('dom-ready', () => {
-                win.webContents.send('openLogFromFile', log, null);
+                win.webContents.send('openLogFromFile', { file: log, start: start, count: count, tzName: tzName });
             });
         }
         return win;

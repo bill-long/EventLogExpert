@@ -7,7 +7,7 @@ import { ElectronService } from '../electron.service';
 import { DatabaseService } from '../database.service';
 import { EventRecord } from './eventlog.models';
 import { Message, ProviderValueName, ProviderEvent } from '../database.models';
-import { Action, LoadActiveLogAction, ClearEventsAction, EventsLoadedAction, FilterEventsAction, FilterEventsFinishedAction, FinishedLoadingAction, LoadLogFromFileAction } from './eventlog.actions';
+import { Action, LoadActiveLogAction, ClearEventsAction, EventsLoadedAction, FilterEventsAction, FilterEventsFinishedAction, FinishedLoadingAction, LoadLogFromFileAction, UpdateCountAction } from './eventlog.actions';
 import { State, reducer, filterEvents } from './eventlog.state';
 
 @Injectable()
@@ -22,6 +22,7 @@ export class EventLogService {
     taskCache: { [key: string]: { [key: number]: ProviderValueName } }
     formatRegexp = new RegExp(/%([0-9]+)/g);
     timeFormat: Intl.DateTimeFormat;
+    tzName: string;
 
     constructor(private eventUtils: EventUtils, private ngZone: NgZone,
         private electronSvc: ElectronService, private dbService: DatabaseService) {
@@ -39,6 +40,8 @@ export class EventLogService {
         const initState: State = {
             loading: false,
             name: null,
+            start: 0,
+            count: 0,
             records: [],
             recordsFiltered: [],
             focusedEvent: null,
@@ -61,7 +64,7 @@ export class EventLogService {
 
         // Load log file when selected from menu
         this.actions$.pipe(filter(a => a instanceof LoadLogFromFileAction)).subscribe((a: LoadLogFromFileAction) => {
-            this.loadLogFromFile(a.file);
+            this.loadLogFromFile(a.file, a.start, a.count);
         });
 
         // Filter when someone fires a filter action
@@ -120,13 +123,35 @@ export class EventLogService {
         this.loadEventsFromReaderDelegate(delegate);
     }
 
-    loadLogFromFile(file: string) {
+    loadLogFromFile(file: string, start: number, count: number) {
+        if (count < 1) {
+            throw "Invalid argument. Count must be greater than 0.";
+        }
+
+        if (start === 0) {
+            let recordCountResult = this.eventUtils.getEventLogRecordCount({ file }, true) as { count: number };
+            if (count > recordCountResult.count) {
+                setTimeout(() => {
+                    this.actions$.next(new UpdateCountAction(recordCountResult.count));
+                }, 500);
+            }
+
+            let remaining = recordCountResult.count - count;
+            let loading = count;
+            while (remaining > 0) {
+                this.electronSvc.ipcRenderer.send('openPartialEventLog', { file, start: loading, count: (remaining > count ? count : remaining), tzName: this.tzName });
+                loading += count;
+                remaining -= count;
+            }
+        }
+
         // Get an event reader delegate
-        const delegate: any = this.eventUtils.getEventLogFileReader({ file }, true);
+        const delegate: any = this.eventUtils.getEventLogFileReader({ file, start, count }, true);
         this.loadEventsFromReaderDelegate(delegate);
     }
 
     setTimeZone(tzName: string) {
+        this.tzName = tzName;
         this.timeFormat = Intl.DateTimeFormat(navigator.language,
             { timeZone: tzName, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
     }

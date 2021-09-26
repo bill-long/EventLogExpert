@@ -14,6 +14,12 @@ export class EventUtils {
         methodName: 'GetActiveEventLogReader'
     });
 
+    getEventLogRecordCount = this.electronSvc.edge.func({
+        assemblyFile: this.electronSvc.extraResourcesPath + 'eventutils/EventLogExpert.dll',
+        typeName: 'EventLogExpert.EventReader',
+        methodName: 'GetEventLogRecordCount'
+    });
+
     getEventLogFileReader = this.electronSvc.edge.func({
         assemblyFile: this.electronSvc.extraResourcesPath + 'eventutils/EventLogExpert.dll',
         typeName: 'EventLogExpert.EventReader',
