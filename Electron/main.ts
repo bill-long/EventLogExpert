@@ -9,7 +9,7 @@ let serve;
 const args = process.argv.slice(1);
 serve = args.some(val => val === '--serve');
 
-const maxEventsPerWindow = 1500000;
+const maxEventsPerWindow = 1000000;
 const windowManager = new EventLogExpertWindowManager(serve);
 const menuBar = new EventLogExpertMenu(windowManager, maxEventsPerWindow);
 
