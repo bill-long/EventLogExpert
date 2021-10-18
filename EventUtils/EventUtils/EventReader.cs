@@ -155,12 +155,12 @@ namespace EventLogExpert
                         events.Add(new
                         {
                             evt.Id,
-                            evt.Version,
+                            Version = evt.Version.HasValue ? evt.Version.Value.ToString() : "0",
                             evt.Keywords,
                             evt.Qualifiers,
                             evt.LogName,
                             evt.MachineName,
-                            evt.Level,
+                            Level = evt.Level.HasValue ? evt.Level.Value.ToString() : "0",
                             evt.TimeCreated,
                             evt.ProviderName,
                             evt.Task,
