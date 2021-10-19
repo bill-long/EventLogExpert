@@ -1,8 +1,7 @@
-import { BrowserWindow, screen, app, ipcMain, dialog, shell } from 'electron';
+import { BrowserWindow, screen, app, ipcMain } from 'electron';
 import * as isDev from 'electron-is-dev';
 import * as url from 'url';
 import * as path from 'path';
-import * as fs from 'fs';
 
 export class EventLogExpertWindowManager {
 
@@ -95,33 +94,6 @@ export class EventLogExpertWindowManager {
     private setWindowInfo(window: BrowserWindow, log: string) {
         window.setTitle(`EventLogExpert ${app.getVersion()} ${log ? log : ''}`);
         window.on('page-title-updated', e => e.preventDefault());
-        this.verifyDotnetPresent(window);
-    }
-
-    private verifyDotnetPresent(window: BrowserWindow) {
-        const dotnetFolder = path.join(process.env.PROGRAMFILES, 'dotnet/shared/Microsoft.NETCore.App')
-        fs.readdir(dotnetFolder, (err, files) => {
-            if (!err) {
-                let version5 = files.find(name => name.startsWith('5.'));
-                if (version5) {
-                    return;
-                }
-            }
-
-            const downloadUrl = 'https://dotnet.microsoft.com/download/dotnet/5.0/runtime';
-
-            dialog.showMessageBoxSync(window, {
-                type: 'error',
-                buttons: ['OK'],
-                title: '.NET 5 required',
-                message: 'EventLogExpert now requires .NET 5. Please install the .NET 5.0 runtime. The console apps package is all that is needed: ' +
-                downloadUrl + '. After you click OK, we will attempt to open the download URL.'
-            });
-
-            shell.openExternal(downloadUrl);
-
-            app.exit(0);
-        });
     }
 
     public windowCount() { return this.openWindows.length; }
