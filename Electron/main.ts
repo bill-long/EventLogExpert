@@ -3,7 +3,9 @@ import { autoUpdater } from 'electron-updater';
 import { EventLogExpertMenu } from './eventlogexpert.menu';
 import { EventLogExpertWindowManager } from './eventlogexpert.windowmanager';
 import * as log from 'electron-log';
-import { electron } from 'process';
+import * as process from 'process';
+
+process.env.EDGE_USE_CORECLR = '1';
 
 let serve;
 const args = process.argv.slice(1);
