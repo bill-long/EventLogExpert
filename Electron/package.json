@@ -28,7 +28,7 @@
     "publish": "electron-builder --publish onTagOrDraft"
   },
   "dependencies": {
-    "electron-edge-js": "^12",
+    "electron-edge-js": "^14",
     "electron-is-dev": "1.2.0",
     "electron-log": "4.3.1",
     "electron-updater": "4.3.5",
