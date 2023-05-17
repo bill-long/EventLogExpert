@@ -1,5 +1,7 @@
 # EventLogExpert
 
+## This version of the tool is no longer maintained. Please find the new one here: https://github.com/microsoft/EventLogExpert
+
 A Windows Event Log viewer for IT professionals and power users.
 
 ## Build status
